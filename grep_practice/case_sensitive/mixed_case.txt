@@ -1,0 +1,27 @@
+Case sensitivity testing file:
+
+Error occurred in the system
+ERROR: Critical failure detected
+error: Minor issue found
+Error: User input validation failed
+eRRoR: Mixed case variation
+
+Success message received
+SUCCESS: Operation completed
+success: Task finished
+Success: Login successful
+sUcCeSs: Another mixed case
+
+Warning about performance
+WARNING: High memory usage
+warning: Slow response time
+Warning: Deprecated function used
+wArNiNg: Alternating case
+
+Information logging
+INFO: System started
+info: User logged in
+Info: File uploaded
+iNfO: Mixed case info
+
+Test TEST test TeSt

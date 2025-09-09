@@ -1,0 +1,41 @@
+{
+  "name": "grep-master",
+  "version": "1.0.0",
+  "description": "Interactive grep learning game with beautiful terminal aesthetics",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "build": "echo 'No build process needed for vanilla HTML/CSS/JS'",
+    "deploy": "gh-pages -d .",
+    "lint": "eslint *.js",
+    "test": "echo 'Tests coming soon'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/grep-master.git"
+  },
+  "keywords": [
+    "grep",
+    "terminal",
+    "game",
+    "education",
+    "learning",
+    "command-line",
+    "regex",
+    "interactive",
+    "tutorial"
+  ],
+  "author": "Your Name <your-email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-username/grep-master/issues"
+  },
+  "homepage": "https://your-username.github.io/grep-master",
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "gh-pages": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

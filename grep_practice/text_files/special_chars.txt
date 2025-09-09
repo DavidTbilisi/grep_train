@@ -1,0 +1,21 @@
+File with special characters for regex testing:
+
+Basic punctuation: . , ; : ! ? ' " 
+Brackets and parentheses: () [] {} <>
+Math symbols: + - * / = % ^ & | ~
+Special symbols: @ # $ % ^ & * _ - + = \ | ` ~
+Quotes: "double quotes" 'single quotes' `backticks`
+Regex metacharacters: . * + ? ^ $ | \ ( ) [ ] { }
+Escaped characters: \n \t \r \\ \' \"
+Unicode characters: © ® ™ ° ± ½ ¼ ¾ α β γ δ ε
+Emojis: 😀 😊 🚀 💻 📁 🔍 ⭐ ✅
+Accented characters: café naïve résumé Björk München
+Currency symbols: $ € £ ¥ ₹ ₿ ¢ ₽
+Mathematical symbols: ∞ ∑ ∏ √ ∆ π ≈ ≠ ≤ ≥
+Arrows: → ← ↑ ↓ ↔ ⇒ ⇐ ⇑ ⇓ ⇔
+Lines with only special chars:
+!@#$%^&*()
+[]{}|;':\",./<>?
+`~1234567890-=
+ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß
+àáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ

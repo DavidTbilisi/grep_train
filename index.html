@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grep Master - Terminal Learning Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon"
+        href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMUEyMDMwIi8+Cjx0ZXh0IHg9IjQiIHk9IjIyIiBmb250LWZhbWlseT0iRmlyYSBDb2RlLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiMwMEZGNDEiPiQ8L3RleHQ+Cjwvc3ZnPgo=">
+</head>
+
+<body>
+    <div class="terminal-container">
+        <!-- Terminal Header -->
+        <div class="terminal-header">
+            <div class="terminal-controls">
+                <span class="control close"></span>
+                <span class="control minimize"></span>
+                <span class="control maximize"></span>
+            </div>
+            <div class="terminal-title">
+                <span class="terminal-icon">$</span>
+                Grep Master v1.0.0
+            </div>
+            <div class="terminal-stats">
+                <span class="level">Level: <span id="current-level">1</span></span>
+                <span class="score">Score: <span id="current-score">0</span></span>
+            </div>
+        </div>
+
+        <!-- Terminal Content -->
+        <div class="terminal-content">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="screen active">
+                <div class="ascii-art">
+                    <pre id="ascii-logo"></pre>
+                </div>
+                <div class="welcome-text">
+                    <p class="typing-text"
+                        data-text="Welcome to Grep Master - The Ultimate Command Line Learning Game!"></p>
+                    <p class="typing-text"
+                        data-text="Master the art of text searching with grep through interactive challenges."></p>
+                    <div class="menu-options">
+                        <button class="terminal-button" onclick="startGame()">
+                            <span class="prompt">$</span> start-game
+                        </button>
+                        <button class="terminal-button" onclick="showTutorial()">
+                            <span class="prompt">$</span> tutorial
+                        </button>
+                        <button class="terminal-button" onclick="showLeaderboard()">
+                            <span class="prompt">$</span> leaderboard
+                        </button>
+                        <button class="terminal-button" onclick="showAbout()">
+                            <span class="prompt">$</span> about
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Screen -->
+            <div id="game-screen" class="screen">
+                <div class="challenge-header">
+                    <div class="challenge-info">
+                        <h2 id="challenge-title">Challenge 1: Basic Pattern Matching</h2>
+                        <p id="challenge-description">Find all lines containing "ERROR" in the log file.</p>
+                        <div class="challenge-stats">
+                            <span class="lives">Lives: <span id="lives-count">3</span> ❤️</span>
+                            <span class="hints">Hints: <span id="hints-count">2</span> 💡</span>
+                            <span class="timer">Time: <span id="timer">60</span>s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File System Display -->
+                <div class="file-system">
+                    <div class="file-tree">
+                        <div class="tree-header">Files:</div>
+                        <div id="file-tree-content"></div>
+                    </div>
+                    <div class="file-content">
+                        <div class="file-header">
+                            <span id="current-file">sample.log</span>
+                            <button class="hint-btn" onclick="getHint()">💡 Hint</button>
+                        </div>
+                        <div class="file-viewer">
+                            <pre id="file-content"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Input -->
+                <div class="command-section">
+                    <div class="command-prompt">
+                        <span class="prompt-symbol">user@grepmaster:~$</span>
+                        <input type="text" id="command-input" class="command-input"
+                            placeholder="Enter your grep command here..." autocomplete="off">
+                        <button class="execute-btn" onclick="executeCommand()">Execute</button>
+                    </div>
+                    <div class="command-output">
+                        <div id="output-content"></div>
+                    </div>
+                </div>
+
+                <!-- Challenge Controls -->
+                <div class="challenge-controls">
+                    <button class="terminal-button secondary" onclick="skipChallenge()">Skip</button>
+                    <button class="terminal-button secondary" onclick="resetChallenge()">Reset</button>
+                    <button class="terminal-button secondary" onclick="showSolution()">Show Solution</button>
+                    <button class="terminal-button" onclick="nextChallenge()">Next Challenge</button>
+                </div>
+            </div>
+
+            <!-- Tutorial Screen -->
+            <div id="tutorial-screen" class="screen">
+                <div class="tutorial-content">
+                    <h2>Grep Tutorial</h2>
+                    <div class="tutorial-section">
+                        <h3>What is grep?</h3>
+                        <p>grep (Global Regular Expression Print) is a command-line utility for searching text patterns
+                            in files.</p>
+
+                        <h3>Basic Syntax</h3>
+                        <div class="code-example">
+                            <code>grep [options] pattern [file...]</code>
+                        </div>
+
+                        <h3>Common Options</h3>
+                        <div class="options-list">
+                            <div class="option">
+                                <code>-i</code> <span>Case insensitive search</span>
+                            </div>
+                            <div class="option">
+                                <code>-n</code> <span>Show line numbers</span>
+                            </div>
+                            <div class="option">
+                                <code>-r</code> <span>Recursive search</span>
+                            </div>
+                            <div class="option">
+                                <code>-v</code> <span>Invert match (show non-matching lines)</span>
+                            </div>
+                            <div class="option">
+                                <code>-c</code> <span>Count matching lines</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="terminal-button" onclick="showScreen('welcome-screen')">Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- Leaderboard Screen -->
+            <div id="leaderboard-screen" class="screen">
+                <div class="leaderboard-content">
+                    <h2>🏆 Leaderboard</h2>
+                    <div class="leaderboard-list" id="leaderboard-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <button class="terminal-button" onclick="showScreen('welcome-screen')">Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- About Screen -->
+            <div id="about-screen" class="screen">
+                <div class="about-content">
+                    <h2>About Grep Master</h2>
+                    <p>Grep Master is an interactive learning game designed to teach the grep command through hands-on
+                        practice.</p>
+
+                    <h3>Features:</h3>
+                    <ul>
+                        <li>Progressive difficulty levels</li>
+                        <li>Real-world scenarios</li>
+                        <li>Interactive terminal experience</li>
+                        <li>Comprehensive grep command coverage</li>
+                        <li>Score tracking and achievements</li>
+                    </ul>
+
+                    <h3>How to Play:</h3>
+                    <ol>
+                        <li>Read the challenge description</li>
+                        <li>Examine the provided files</li>
+                        <li>Write a grep command to solve the challenge</li>
+                        <li>Execute and see the results</li>
+                        <li>Progress through increasingly difficult levels</li>
+                    </ol>
+
+                    <div class="credits">
+                        <p>Created with ❤️ for the command line community</p>
+                        <p>Built with HTML5, CSS3, and JavaScript</p>
+                    </div>
+
+                    <button class="terminal-button" onclick="showScreen('welcome-screen')">Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- Success Modal -->
+            <div id="success-modal" class="modal">
+                <div class="modal-content success">
+                    <h2>🎉 Challenge Completed!</h2>
+                    <div class="success-stats">
+                        <p>Score: <span id="challenge-score">0</span></p>
+                        <p>Time Bonus: <span id="time-bonus">0</span></p>
+                        <p>Total: <span id="total-score">0</span></p>
+                    </div>
+                    <button class="terminal-button" onclick="closeModal()">Continue</button>
+                </div>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div id="gameover-modal" class="modal">
+                <div class="modal-content gameover">
+                    <h2>💀 Game Over</h2>
+                    <p>Don't give up! Learning grep takes practice.</p>
+                    <div class="final-stats">
+                        <p>Final Score: <span id="final-score">0</span></p>
+                        <p>Levels Completed: <span id="levels-completed">0</span></p>
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="terminal-button" onclick="restartGame()">Try Again</button>
+                        <button class="terminal-button secondary" onclick="showScreen('welcome-screen')">Main
+                            Menu</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading grep environment...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="game-data.js"></script>
+    <script src="game-engine.js"></script>
+    <script src="terminal-effects.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example HTML Page for Grep Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
+</head>
+
+<body>
+    <!-- Header section -->
+    <header class="main-header">
+        <nav class="navbar">
+            <div class="logo">
+                <img src="logo.png" alt="Company Logo">
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#services" class="nav-link">Services</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <section id="home" class="hero-section">
+            <div class="container">
+                <h1 class="hero-title">Welcome to Our Website</h1>
+                <p class="hero-description">
+                    This is an example HTML page designed for grep practice.
+                    It contains various HTML elements and patterns.
+                </p>
+                <button class="btn btn-primary" onclick="showMessage()">
+                    Get Started
+                </button>
+            </div>
+        </section>
+
+        <section id="about" class="about-section">
+            <div class="container">
+                <h2>About Us</h2>
+                <div class="about-grid">
+                    <div class="about-item">
+                        <h3>Our Mission</h3>
+                        <p>To provide excellent service to our customers worldwide.</p>
+                    </div>
+                    <div class="about-item">
+                        <h3>Our Vision</h3>
+                        <p>To be the leading company in our industry.</p>
+                    </div>
+                    <div class="about-item">
+                        <h3>Our Values</h3>
+                        <ul>
+                            <li>Quality</li>
+                            <li>Innovation</li>
+                            <li>Customer Focus</li>
+                            <li>Integrity</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="services-section">
+            <div class="container">
+                <h2>Our Services</h2>
+                <div class="services-grid">
+                    <article class="service-card">
+                        <img src="service1.jpg" alt="Web Development">
+                        <h3>Web Development</h3>
+                        <p>Custom web applications and websites.</p>
+                        <a href="/services/web-development" class="service-link">Learn More</a>
+                    </article>
+                    <article class="service-card">
+                        <img src="service2.jpg" alt="Mobile Apps">
+                        <h3>Mobile Applications</h3>
+                        <p>iOS and Android app development.</p>
+                        <a href="/services/mobile-apps" class="service-link">Learn More</a>
+                    </article>
+                    <article class="service-card">
+                        <img src="service3.jpg" alt="Consulting">
+                        <h3>Technical Consulting</h3>
+                        <p>Expert advice for your technical challenges.</p>
+                        <a href="/services/consulting" class="service-link">Learn More</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="contact-section">
+            <div class="container">
+                <h2>Contact Us</h2>
+                <form class="contact-form" action="/contact" method="POST">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone:</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message:</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <h4>Address</h4>
+                        <p>123 Main Street<br>City, State 12345</p>
+                    </div>
+                    <div class="contact-item">
+                        <h4>Phone</h4>
+                        <p>(555) 123-4567</p>
+                    </div>
+                    <div class="contact-item">
+                        <h4>Email</h4>
+                        <p>info@example.com</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
+                        <li><a href="/sitemap">Sitemap</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Follow Us</h4>
+                    <div class="social-links">
+                        <a href="https://facebook.com/example" class="social-link">Facebook</a>
+                        <a href="https://twitter.com/example" class="social-link">Twitter</a>
+                        <a href="https://linkedin.com/company/example" class="social-link">LinkedIn</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Example Company. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        function showMessage() {
+            alert('Welcome to our website!');
+            console.log('INFO: Welcome button clicked');
+        }
+
+        // TODO: Add form validation
+        // FIXME: Improve accessibility
+    </script>
+</body>
+
+</html>
