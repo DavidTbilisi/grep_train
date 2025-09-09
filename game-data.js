@@ -122,7 +122,7 @@ Operation completed
 Login failed for user demo`,
           },
           correctCommand: "grep -c 'failed' error.log",
-          expectedOutput: ["4"],
+          expectedOutput: ["5"],
           hints: [
             "Use the -c flag to count matching lines",
             "This returns a number, not the actual lines",
@@ -178,7 +178,7 @@ def test():
     test_case = 'example'`,
           },
           correctCommand: "grep -w 'test' code.txt",
-          expectedOutput: ["    test = True", "    return test"],
+          expectedOutput: ["    test = True", "    return test", "def test():"],
           hints: [
             "Use the -w flag to match whole words only",
             "This prevents matching partial words",

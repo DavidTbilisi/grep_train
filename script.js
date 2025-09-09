@@ -20,11 +20,11 @@ function initializeApp() {
   setTimeout(() => {
     terminalEffects.playBootSequence(() => {
       game.init();
-      
+
       // Hide loading overlay after boot sequence
       setTimeout(() => {
         hideLoading();
-        
+
         // Start typing animations for welcome screen
         setTimeout(() => {
           startWelcomeAnimations();
@@ -69,6 +69,15 @@ function showLeaderboard() {
   showTransition(() => {
     game.updateLeaderboard();
     showScreen("leaderboard-screen");
+  });
+}
+
+function showSettings() {
+  playClickSound();
+  showTransition(() => {
+    showScreen("settings-screen");
+    loadSettings();
+    animateSettingsContent();
   });
 }
 
@@ -160,6 +169,21 @@ function resetChallenge() {
 
 function showSolution() {
   playClickSound();
+
+  // Check if game is running
+  if (!game || !game.gameStarted) {
+    alert("Start a game first to use the solution feature!");
+    return;
+  }
+
+  // Check if solutions are enabled in settings
+  if (gameSettings && gameSettings.showSolution === false) {
+    alert(
+      "Solutions are disabled in settings! Enable 'Show Solutions' in the Settings menu to use this feature."
+    );
+    return;
+  }
+
   if (
     confirm("Are you sure you want to see the solution? You will lose a life.")
   ) {
@@ -482,10 +506,227 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Settings System
+let gameSettings = {
+  lives: 3,
+  hints: 2,
+  difficulty: "normal",
+  soundEnabled: true,
+  animationsEnabled: true,
+  theme: "matrix",
+  autoProgress: false,
+  showSolution: true,
+};
+
+// Load settings from localStorage
+function loadSettings() {
+  const saved = localStorage.getItem("grepMasterSettings");
+  if (saved) {
+    gameSettings = { ...gameSettings, ...JSON.parse(saved) };
+  }
+  updateSettingsUI();
+}
+
+// Save settings to localStorage
+function saveSettings() {
+  localStorage.setItem("grepMasterSettings", JSON.stringify(gameSettings));
+  playClickSound();
+
+  // Show confirmation
+  const button = event.target;
+  const originalText = button.textContent;
+  button.textContent = "Saved! ✓";
+  button.style.background = "#00ff41";
+  button.style.color = "#0a1a20";
+
+  setTimeout(() => {
+    button.textContent = originalText;
+    button.style.background = "";
+    button.style.color = "";
+  }, 1500);
+
+  // Apply settings to current game if running
+  if (game && game.gameStarted) {
+    applySettingsToGame();
+  }
+}
+
+// Update settings UI elements
+function updateSettingsUI() {
+  document.getElementById("lives-display").textContent = gameSettings.lives;
+  document.getElementById("hints-display").textContent = gameSettings.hints;
+  document.getElementById("difficulty-select").value = gameSettings.difficulty;
+  document.getElementById("sound-toggle").checked = gameSettings.soundEnabled;
+  document.getElementById("animations-toggle").checked =
+    gameSettings.animationsEnabled;
+  document.getElementById("theme-select").value = gameSettings.theme;
+  document.getElementById("auto-progress-toggle").checked =
+    gameSettings.autoProgress;
+  document.getElementById("show-solution-toggle").checked =
+    gameSettings.showSolution;
+}
+
+// Adjust numeric settings
+function adjustSetting(type, delta) {
+  playClickSound();
+
+  if (type === "lives") {
+    gameSettings.lives = Math.max(1, Math.min(10, gameSettings.lives + delta));
+  } else if (type === "hints") {
+    gameSettings.hints = Math.max(0, Math.min(5, gameSettings.hints + delta));
+  }
+
+  updateSettingsUI();
+}
+
+// Update difficulty setting
+function updateDifficulty() {
+  playClickSound();
+  gameSettings.difficulty = document.getElementById("difficulty-select").value;
+
+  // Adjust other settings based on difficulty
+  switch (gameSettings.difficulty) {
+    case "easy":
+      gameSettings.lives = Math.max(gameSettings.lives, 5);
+      gameSettings.hints = Math.max(gameSettings.hints, 3);
+      break;
+    case "hard":
+      gameSettings.lives = Math.min(gameSettings.lives, 2);
+      gameSettings.hints = Math.min(gameSettings.hints, 1);
+      break;
+    case "expert":
+      gameSettings.lives = Math.min(gameSettings.lives, 1);
+      gameSettings.hints = 0;
+      break;
+  }
+
+  updateSettingsUI();
+}
+
+// Toggle settings
+function toggleSound() {
+  playClickSound();
+  gameSettings.soundEnabled = document.getElementById("sound-toggle").checked;
+}
+
+function toggleAnimations() {
+  playClickSound();
+  gameSettings.animationsEnabled =
+    document.getElementById("animations-toggle").checked;
+}
+
+function updateTheme() {
+  playClickSound();
+  gameSettings.theme = document.getElementById("theme-select").value;
+  applyTheme();
+}
+
+function toggleAutoProgress() {
+  playClickSound();
+  gameSettings.autoProgress = document.getElementById(
+    "auto-progress-toggle"
+  ).checked;
+}
+
+function toggleShowSolution() {
+  playClickSound();
+  gameSettings.showSolution = document.getElementById(
+    "show-solution-toggle"
+  ).checked;
+
+  // Apply to running game immediately
+  if (game && game.gameStarted) {
+    applySettingsToGame();
+  }
+}
+
+// Apply theme
+function applyTheme() {
+  const root = document.documentElement;
+
+  switch (gameSettings.theme) {
+    case "matrix":
+      root.style.setProperty("--primary-color", "#00ff41");
+      root.style.setProperty("--secondary-color", "#00ccff");
+      break;
+    case "amber":
+      root.style.setProperty("--primary-color", "#ffb000");
+      root.style.setProperty("--secondary-color", "#ff8800");
+      break;
+    case "blue":
+      root.style.setProperty("--primary-color", "#00aaff");
+      root.style.setProperty("--secondary-color", "#0088cc");
+      break;
+    case "purple":
+      root.style.setProperty("--primary-color", "#aa00ff");
+      root.style.setProperty("--secondary-color", "#8800cc");
+      break;
+  }
+}
+
+// Reset to defaults
+function resetToDefaults() {
+  playClickSound();
+
+  if (confirm("Reset all settings to default values?")) {
+    gameSettings = {
+      lives: 3,
+      hints: 2,
+      difficulty: "normal",
+      soundEnabled: true,
+      animationsEnabled: true,
+      theme: "matrix",
+      autoProgress: false,
+      showSolution: true,
+    };
+    updateSettingsUI();
+    applyTheme();
+  }
+}
+
+// Apply settings to running game
+function applySettingsToGame() {
+  if (game) {
+    // Don't change lives/hints mid-challenge, only for new challenges
+    game.defaultLives = gameSettings.lives;
+    game.defaultHints = gameSettings.hints;
+    game.settings = gameSettings;
+
+    // Apply settings immediately
+    game.applySettings();
+  }
+}
+
+// Settings screen animations
+function animateSettingsContent() {
+  const sections = document.querySelectorAll(".settings-section");
+
+  sections.forEach((section, index) => {
+    section.style.opacity = "0";
+    section.style.transform = "translateY(30px)";
+
+    setTimeout(() => {
+      section.style.transition = "all 0.6s ease";
+      section.style.opacity = "1";
+      section.style.transform = "translateY(0)";
+    }, index * 200);
+  });
+}
+
+// Initialize settings on app load
+document.addEventListener("DOMContentLoaded", function () {
+  loadSettings();
+  applyTheme();
+
+  // Ensure settings are available globally
+  window.gameSettings = gameSettings;
+});
+
 // Export for debugging
 window.gameDebug = {
   game: () => game,
   effects: () => terminalEffects,
+  settings: () => gameSettings,
   showScreen: showScreen,
   playSound: {
     click: playClickSound,

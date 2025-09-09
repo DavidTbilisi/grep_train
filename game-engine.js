@@ -7,11 +7,14 @@ class GrepGameEngine {
     this.score = 0;
     this.lives = 3;
     this.hints = 2;
+    this.defaultLives = 3;
+    this.defaultHints = 2;
     this.timer = null;
     this.timeRemaining = 60;
     this.gameStarted = false;
     this.currentFiles = {};
     this.achievements = new Set();
+    this.settings = null;
     this.stats = {
       totalCommands: 0,
       correctCommands: 0,
@@ -63,10 +66,23 @@ class GrepGameEngine {
   // Start new game
   startGame() {
     this.resetGame();
+    this.applySettings();
     this.gameStarted = true;
     this.gameStartTime = Date.now();
     this.loadLevel(1);
     this.showScreen("game-screen");
+  }
+
+  // Apply user settings to game
+  applySettings() {
+    // Get settings from global gameSettings if available
+    if (typeof gameSettings !== "undefined") {
+      this.settings = gameSettings;
+      this.defaultLives = gameSettings.lives;
+      this.defaultHints = gameSettings.hints;
+      this.lives = gameSettings.lives;
+      this.hints = gameSettings.hints;
+    }
   }
 
   // Reset game state
@@ -74,8 +90,8 @@ class GrepGameEngine {
     this.currentLevel = 1;
     this.currentChallenge = 1;
     this.score = 0;
-    this.lives = 3;
-    this.hints = 2;
+    this.lives = this.defaultLives;
+    this.hints = this.defaultHints;
     this.timeRemaining = 60;
     this.stats = {
       totalCommands: 0,
@@ -97,7 +113,8 @@ class GrepGameEngine {
     }
 
     this.currentLevel = levelNumber;
-    this.currentChallenge = 1;
+    // Set current challenge to the ID of the first challenge in this level
+    this.currentChallenge = level.challenges[0].id;
     this.loadChallenge(level.challenges[0]);
   }
 
@@ -106,7 +123,7 @@ class GrepGameEngine {
     this.challengeStartTime = Date.now();
     this.currentFiles = { ...challenge.files };
     this.timeRemaining = challenge.timeLimit;
-    this.hints = 2; // Reset hints for each challenge
+    this.hints = 10; // Reset hints for each challenge
 
     // Update UI
     document.getElementById("challenge-title").textContent = challenge.title;
@@ -297,18 +314,21 @@ class GrepGameEngine {
         // Create regex pattern
         let regex;
         try {
-          let regexPattern = pattern;
+          let regexPattern;
 
           if (isWholeWord) {
-            regexPattern = `\\b${pattern}\\b`;
-          }
-
-          if (!isExtendedRegex) {
+            // For whole word matching, escape the pattern first, then add word boundaries
+            const escapedPattern = pattern.replace(
+              /[.*+?^${}()|[\]\\]/g,
+              "\\$&"
+            );
+            regexPattern = `\\b${escapedPattern}\\b`;
+          } else if (!isExtendedRegex) {
             // Escape special characters for basic regex
-            regexPattern = regexPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            if (isWholeWord) {
-              regexPattern = `\\b${regexPattern}\\b`;
-            }
+            regexPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          } else {
+            // Extended regex - use pattern as-is
+            regexPattern = pattern;
           }
 
           const flags_regex = isCaseInsensitive ? "gi" : "g";
@@ -428,23 +448,52 @@ class GrepGameEngine {
       .filter((line) => line && line !== "--");
     const normalizedExpected = expected.map((line) => line.trim());
 
+    // Debug output
+    console.log("Debug - Raw output:", output);
+    console.log("Debug - Expected output:", expected);
+    console.log("Debug - Normalized output:", normalizedOutput);
+    console.log("Debug - Normalized expected:", normalizedExpected);
+
     if (normalizedOutput.length !== normalizedExpected.length) {
+      console.log(
+        "Debug - Length mismatch:",
+        normalizedOutput.length,
+        "vs",
+        normalizedExpected.length
+      );
       return false;
     }
 
-    return normalizedOutput.every(
+    const result = normalizedOutput.every(
       (line, index) =>
         line === normalizedExpected[index] ||
         line.endsWith(normalizedExpected[index])
     );
+
+    console.log("Debug - Match result:", result);
+    return result;
   }
 
   // Get current challenge
   getCurrentChallenge() {
     const level = GAME_DATA.levels.find((l) => l.id === this.currentLevel);
-    if (!level) return null;
+    if (!level) {
+      console.log("getCurrentChallenge: Level not found", this.currentLevel);
+      return null;
+    }
 
-    return level.challenges.find((c) => c.id === this.currentChallenge);
+    const challenge = level.challenges.find(
+      (c) => c.id === this.currentChallenge
+    );
+    if (!challenge) {
+      console.log("getCurrentChallenge: Challenge not found", {
+        currentLevel: this.currentLevel,
+        currentChallenge: this.currentChallenge,
+        availableChallenges: level.challenges.map((c) => c.id),
+      });
+    }
+
+    return challenge;
   }
 
   // Challenge success
@@ -496,14 +545,37 @@ class GrepGameEngine {
   // Next challenge
   nextChallenge() {
     const level = GAME_DATA.levels.find((l) => l.id === this.currentLevel);
-    if (!level) return;
+    if (!level) {
+      console.log("Level not found:", this.currentLevel);
+      return;
+    }
 
-    const nextChallengeIndex =
-      level.challenges.findIndex((c) => c.id === this.currentChallenge) + 1;
+    const currentChallengeIndex = level.challenges.findIndex(
+      (c) => c.id === this.currentChallenge
+    );
+    console.log(
+      "Current challenge index:",
+      currentChallengeIndex,
+      "Challenge ID:",
+      this.currentChallenge
+    );
+
+    const nextChallengeIndex = currentChallengeIndex + 1;
 
     if (nextChallengeIndex < level.challenges.length) {
-      this.currentChallenge = level.challenges[nextChallengeIndex].id;
-      this.loadChallenge(level.challenges[nextChallengeIndex]);
+      const nextChallenge = level.challenges[nextChallengeIndex];
+      this.currentChallenge = nextChallenge.id;
+
+      // Reset lives and hints for new challenge
+      this.lives = this.defaultLives;
+      this.hints = this.defaultHints;
+
+      console.log(
+        "Loading next challenge:",
+        nextChallenge.id,
+        nextChallenge.title
+      );
+      this.loadChallenge(nextChallenge);
     } else {
       // Level complete
       this.levelComplete();
@@ -535,8 +607,67 @@ class GrepGameEngine {
     this.updateUI();
 
     if (this.lives <= 0) {
-      this.gameOver();
+      this.handleOutOfLives();
     }
+  }
+
+  // Handle when player runs out of lives
+  handleOutOfLives() {
+    this.stopTimer();
+
+    if (this.currentLevel <= 1) {
+      // If we're at level 1, game over
+      this.gameOver();
+    } else {
+      // Go back one level
+      this.goBackOneLevel();
+    }
+  }
+
+  // Go back one level when out of lives
+  goBackOneLevel() {
+    this.currentLevel--;
+    this.currentChallenge = 1;
+
+    // Reset lives and hints for the previous level
+    this.lives = this.defaultLives;
+    this.hints = this.defaultHints;
+
+    // Play error sound if enabled
+    if (
+      this.settings &&
+      this.settings.soundEnabled &&
+      typeof playErrorSound === "function"
+    ) {
+      playErrorSound();
+    }
+
+    // Show feedback message with visual effects
+    const previousLevel = this.currentLevel + 1;
+    this.addOutput(
+      `💔 Out of lives! Dropping back from Level ${previousLevel} to Level ${this.currentLevel}`,
+      "error"
+    );
+    this.addOutput("🔄 Try again with fresh lives and hints!", "info");
+    this.addOutput("📚 Remember: Practice makes perfect!", "info");
+
+    // Add visual shake effect to the game container
+    const gameContainer = document.querySelector(".game-content");
+    if (gameContainer) {
+      gameContainer.style.animation = "shake 0.5s ease-in-out";
+      setTimeout(() => {
+        gameContainer.style.animation = "";
+      }, 500);
+    }
+
+    // Load the previous level after a short delay for better UX
+    setTimeout(() => {
+      this.loadLevel(this.currentLevel);
+      this.addOutput(
+        "🎮 Level " + this.currentLevel + " - Let's try this again!",
+        "success"
+      );
+    }, 2500);
   }
 
   // Game over
@@ -573,7 +704,7 @@ class GrepGameEngine {
     this.hints--;
     this.stats.hintsUsed++;
 
-    const hintIndex = 2 - this.hints - 1;
+    const hintIndex = 10 - this.hints - 1;
     if (hintIndex < challenge.hints.length) {
       this.addOutput(`💡 Hint: ${challenge.hints[hintIndex]}`, "info");
     }
@@ -584,9 +715,34 @@ class GrepGameEngine {
   // Show solution
   showSolution() {
     const challenge = this.getCurrentChallenge();
-    if (!challenge) return;
+    if (!challenge) {
+      this.addOutput("❌ No active challenge found!", "error");
+      return;
+    }
 
+    // Apply current settings if not already applied
+    if (!this.settings && typeof gameSettings !== "undefined") {
+      this.applySettings();
+    }
+
+    // Check if showing solutions is enabled in settings
+    if (this.settings && this.settings.showSolution === false) {
+      this.addOutput("❌ Solutions are disabled in settings!", "error");
+      this.addOutput(
+        "💡 Enable 'Show Solutions' in Settings to use this feature.",
+        "info"
+      );
+      return;
+    }
+
+    // Show the solution
     this.addOutput(`💡 Solution: ${challenge.correctCommand}`, "info");
+    this.addOutput(
+      "📝 Study this command and try to understand why it works!",
+      "info"
+    );
+
+    // Lose a life as penalty for viewing solution
     this.loseLife();
   }
 

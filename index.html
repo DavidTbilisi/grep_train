@@ -54,6 +54,9 @@
                         <button class="terminal-button" onclick="showLeaderboard()">
                             <span class="prompt">$</span> leaderboard
                         </button>
+                        <button class="terminal-button" onclick="showSettings()">
+                            <span class="prompt">$</span> settings
+                        </button>
                         <button class="terminal-button" onclick="showAbout()">
                             <span class="prompt">$</span> about
                         </button>
@@ -159,6 +162,115 @@
                         <!-- Populated by JavaScript -->
                     </div>
                     <button class="terminal-button" onclick="showScreen('welcome-screen')">Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settings-screen" class="screen">
+                <div class="settings-content">
+                    <h2>⚙️ Game Settings</h2>
+                    <p>Customize your grep learning experience</p>
+
+                    <div class="settings-section">
+                        <h3>🎮 Gameplay Settings</h3>
+
+                        <div class="setting-item">
+                            <label for="lives-setting">Lives per Challenge:</label>
+                            <div class="setting-control">
+                                <button class="setting-btn" onclick="adjustSetting('lives', -1)">-</button>
+                                <span id="lives-display" class="setting-value">3</span>
+                                <button class="setting-btn" onclick="adjustSetting('lives', 1)">+</button>
+                                <span class="setting-description">Number of mistakes allowed per challenge (1-10)</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="hints-setting">Hints per Challenge:</label>
+                            <div class="setting-control">
+                                <button class="setting-btn" onclick="adjustSetting('hints', -1)">-</button>
+                                <span id="hints-display" class="setting-value">2</span>
+                                <button class="setting-btn" onclick="adjustSetting('hints', 1)">+</button>
+                                <span class="setting-description">Number of hints available per challenge (0-5)</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="difficulty-setting">Difficulty Mode:</label>
+                            <div class="setting-control">
+                                <select id="difficulty-select" class="setting-select" onchange="updateDifficulty()">
+                                    <option value="easy">Easy (Extra time, more hints)</option>
+                                    <option value="normal" selected>Normal (Standard experience)</option>
+                                    <option value="hard">Hard (Less time, fewer hints)</option>
+                                    <option value="expert">Expert (Minimal assistance)</option>
+                                </select>
+                                <span class="setting-description">Adjusts time limits and hint availability</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔊 Audio & Visual Settings</h3>
+
+                        <div class="setting-item">
+                            <label for="sound-setting">Sound Effects:</label>
+                            <div class="setting-control">
+                                <input type="checkbox" id="sound-toggle" class="setting-checkbox" checked
+                                    onchange="toggleSound()">
+                                <span class="setting-description">Enable terminal sound effects</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="animations-setting">Animations:</label>
+                            <div class="setting-control">
+                                <input type="checkbox" id="animations-toggle" class="setting-checkbox" checked
+                                    onchange="toggleAnimations()">
+                                <span class="setting-description">Enable typing and visual animations</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="theme-setting">Terminal Theme:</label>
+                            <div class="setting-control">
+                                <select id="theme-select" class="setting-select" onchange="updateTheme()">
+                                    <option value="matrix" selected>Matrix Green</option>
+                                    <option value="amber">Amber Classic</option>
+                                    <option value="blue">Cool Blue</option>
+                                    <option value="purple">Cyber Purple</option>
+                                </select>
+                                <span class="setting-description">Choose your terminal color scheme</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>📊 Advanced Settings</h3>
+
+                        <div class="setting-item">
+                            <label for="auto-progress-setting">Auto-Progress:</label>
+                            <div class="setting-control">
+                                <input type="checkbox" id="auto-progress-toggle" class="setting-checkbox"
+                                    onchange="toggleAutoProgress()">
+                                <span class="setting-description">Automatically proceed to next challenge after
+                                    success</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="show-solution-setting">Show Solutions:</label>
+                            <div class="setting-control">
+                                <input type="checkbox" id="show-solution-toggle" class="setting-checkbox" checked
+                                    onchange="toggleShowSolution()">
+                                <span class="setting-description">Allow viewing solutions (costs a life)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="terminal-button secondary" onclick="resetToDefaults()">Reset to Defaults</button>
+                        <button class="terminal-button" onclick="saveSettings()">Save Settings</button>
+                        <button class="terminal-button" onclick="showScreen('welcome-screen')">Back to Menu</button>
+                    </div>
                 </div>
             </div>
 
