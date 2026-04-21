@@ -221,9 +221,11 @@ function animateTutorialContent() {
     section.style.transform = "translateY(20px)";
 
     setTimeout(() => {
-      section.style.transition = "all 0.5s ease";
-      section.style.opacity = "1";
-      section.style.transform = "translateY(0)";
+      requestAnimationFrame(() => {
+        section.style.transition = "all 0.5s ease";
+        section.style.opacity = "1";
+        section.style.transform = "translateY(0)";
+      });
     }, index * 100);
   });
 }
@@ -239,9 +241,11 @@ function animateAboutContent() {
     element.style.transform = "translateX(-20px)";
 
     setTimeout(() => {
-      element.style.transition = "all 0.4s ease";
-      element.style.opacity = "1";
-      element.style.transform = "translateX(0)";
+      requestAnimationFrame(() => {
+        element.style.transition = "all 0.4s ease";
+        element.style.opacity = "1";
+        element.style.transform = "translateX(0)";
+      });
     }, index * 50);
   });
 }
@@ -684,9 +688,11 @@ function animateSettingsContent() {
     section.style.transform = "translateY(30px)";
 
     setTimeout(() => {
-      section.style.transition = "all 0.6s ease";
-      section.style.opacity = "1";
-      section.style.transform = "translateY(0)";
+      requestAnimationFrame(() => {
+        section.style.transition = "all 0.6s ease";
+        section.style.opacity = "1";
+        section.style.transform = "translateY(0)";
+      });
     }, index * 200);
   });
 }

@@ -7,7 +7,7 @@
     "start": "python -m http.server 8000",
     "build": "echo 'No build process needed for vanilla HTML/CSS/JS'",
     "deploy": "gh-pages -d .",
-    "lint": "eslint *.js",
+    "lint": "eslint js/*.js",
     "test": "echo 'Tests coming soon'"
   },
   "repository": {
