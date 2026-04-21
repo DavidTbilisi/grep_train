@@ -1,0 +1,21 @@
+id,name,email,age,city,country,salary,department,join_date,status
+1,John Doe,john.doe@example.com,28,New York,USA,75000,Engineering,2022-01-15,active
+2,Jane Smith,jane.smith@example.com,32,London,UK,68000,Marketing,2021-03-20,active
+3,Bob Johnson,bob.johnson@example.com,45,Toronto,Canada,82000,Engineering,2020-06-10,active
+4,Alice Brown,alice.brown@example.com,29,Sydney,Australia,71000,Design,2022-09-05,inactive
+5,Charlie Wilson,charlie.wilson@example.com,36,Berlin,Germany,78000,Engineering,2021-11-12,active
+6,Diana Martinez,diana.martinez@example.com,31,Madrid,Spain,65000,Sales,2023-02-18,active
+7,Edward Taylor,edward.taylor@example.com,42,Paris,France,89000,Management,2019-08-25,active
+8,Fiona Davis,fiona.davis@example.com,27,Dublin,Ireland,58000,Marketing,2023-05-30,active
+9,George Miller,george.miller@example.com,39,Amsterdam,Netherlands,73000,Engineering,2020-12-03,inactive
+10,Helen Garcia,helen.garcia@example.com,33,Barcelona,Spain,67000,Design,2022-07-14,active
+11,Ian Thompson,ian.thompson@example.com,26,Stockholm,Sweden,61000,Engineering,2023-09-01,active
+12,Julia Anderson,julia.anderson@example.com,35,Oslo,Norway,76000,Sales,2021-04-22,active
+13,Kevin White,kevin.white@example.com,41,Copenhagen,Denmark,84000,Management,2020-01-08,active
+14,Laura Clark,laura.clark@example.com,30,Helsinki,Finland,69000,Marketing,2022-11-17,active
+15,Michael Lee,michael.lee@example.com,37,Zurich,Switzerland,92000,Engineering,2019-12-05,active
+16,Nancy Rodriguez,nancy.rodriguez@example.com,28,Vienna,Austria,64000,Design,2023-03-12,inactive
+17,Oliver Harris,oliver.harris@example.com,44,Brussels,Belgium,81000,Sales,2020-09-28,active
+18,Patricia Lewis,patricia.lewis@example.com,34,Luxembourg,Luxembourg,77000,Engineering,2021-08-16,active
+19,Quentin Walker,quentin.walker@example.com,29,Prague,Czech Republic,59000,Marketing,2023-06-20,active
+20,Rachel Young,rachel.young@example.com,38,Budapest,Hungary,72000,Management,2020-04-15,active

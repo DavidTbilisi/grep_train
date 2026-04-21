@@ -1,0 +1,9 @@
+This file starts as text but contains mixed content.
+Normal text line here.
+Another text line.
+Binary-like content follows: ������������
+Some more text after binary content.
+ERROR: This is a text error message
+WARNING: Mixed file warning
+INFO: Information in mixed file
+End of mixed content file.

@@ -1,0 +1,26 @@
+This is a sample text file for grep practice.
+Hello World
+hello world
+HELLO WORLD
+This line contains ERROR: Something went wrong
+This line contains WARNING: Check this out
+INFO: Everything is fine
+DEBUG: Debugging information
+The quick brown fox jumps over the lazy dog
+THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG
+Numbers: 123 456 789
+Phone: (555) 123-4567
+Email: user@example.com
+Another email: admin@domain.org
+IP Address: 192.168.1.1
+Another IP: 10.0.0.1
+URL: https://www.example.com
+Date: 2024-01-15
+Time: 14:30:25
+Pattern test: aaa bbb ccc
+Another pattern: xxx yyy zzz
+Line with tabs	and	spaces
+Line with only spaces                    
+Empty line follows:
+
+End of file.

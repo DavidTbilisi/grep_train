@@ -1,0 +1,77 @@
+{
+  "application": {
+    "name": "Example Application",
+    "version": "1.0.0",
+    "environment": "production",
+    "debug": false,
+    "maintenance_mode": false
+  },
+  "database": {
+    "type": "postgresql",
+    "host": "localhost",
+    "port": 5432,
+    "name": "example_db",
+    "username": "db_user",
+    "password": "secure_password_123",
+    "ssl": true,
+    "pool_size": 10,
+    "timeout": 30000
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "redis_password",
+    "database": 0,
+    "timeout": 5000
+  },
+  "api": {
+    "base_url": "https://api.example.com",
+    "version": "v1",
+    "timeout": 30000,
+    "rate_limit": {
+      "requests_per_minute": 100,
+      "burst_limit": 200
+    },
+    "authentication": {
+      "type": "bearer_token",
+      "token_expiry": 3600
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "file": "/var/log/app.log",
+    "max_size": "100MB",
+    "max_files": 5,
+    "console": true
+  },
+  "features": {
+    "user_registration": true,
+    "email_verification": true,
+    "two_factor_auth": false,
+    "admin_panel": true,
+    "analytics": true
+  },
+  "email": {
+    "provider": "smtp",
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "noreply@example.com",
+    "password": "email_password_456",
+    "tls": true,
+    "from_address": "noreply@example.com"
+  },
+  "storage": {
+    "type": "s3",
+    "bucket": "example-app-storage",
+    "region": "us-west-2",
+    "access_key": "AKIAIOSFODNN7EXAMPLE",
+    "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  },
+  "monitoring": {
+    "enabled": true,
+    "endpoint": "https://monitoring.example.com",
+    "api_key": "monitoring_key_789",
+    "interval": 60
+  }
+}

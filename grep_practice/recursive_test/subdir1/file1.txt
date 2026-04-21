@@ -1,0 +1,8 @@
+File in subdirectory 1
+This contains a SEARCH_PATTERN for testing
+Another line with some content
+ERROR: Error in subdir1/file1.txt
+INFO: Information in subdirectory 1
+test_function() called here
+Function definition: def my_function():
+End of file in subdir1

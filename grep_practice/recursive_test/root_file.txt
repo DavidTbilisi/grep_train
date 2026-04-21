@@ -1,0 +1,7 @@
+Root level file for recursive testing
+This file contains SEARCH_PATTERN at root level
+ERROR: Root level error message
+INFO: Root level information
+test_function() is also mentioned here
+Function call: my_function()
+This helps test recursive search from root directory

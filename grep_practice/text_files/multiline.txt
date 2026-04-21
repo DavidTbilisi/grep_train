@@ -1,0 +1,46 @@
+This file contains multiline patterns for testing.
+
+Function definition:
+function calculateSum(a, b) {
+    return a + b;
+}
+
+Another function:
+def process_data(data):
+    if data is None:
+        return []
+    return data.split(',')
+
+SQL Query:
+SELECT users.name, 
+       users.email,
+       orders.total
+FROM users
+JOIN orders ON users.id = orders.user_id
+WHERE orders.total > 100;
+
+Multi-line comment:
+/*
+ * This is a multi-line comment
+ * that spans several lines
+ * for testing purposes
+ */
+
+HTML block:
+<div class="container">
+    <h1>Welcome</h1>
+    <p>This is a paragraph</p>
+</div>
+
+Configuration block:
+[database]
+host=localhost
+port=5432
+name=mydb
+
+[server]
+host=0.0.0.0
+port=8080
+debug=true
+
+End of multiline examples.
