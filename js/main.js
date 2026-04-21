@@ -14,6 +14,7 @@ import {
   animateTutorialContent, animateAboutContent,
   animateSettingsContent, startWelcomeAnimations
 } from './animations.js';
+import { attachCommandAutocomplete } from './command-autocomplete.js';
 
 let game;
 
@@ -23,6 +24,11 @@ function initializeApp() {
   applyTheme();
   terminalEffects.init();
   game = new GrepGameEngine();
+
+  const commandInput = document.getElementById("command-input");
+  if (commandInput) {
+    attachCommandAutocomplete(commandInput, () => game);
+  }
 
   setTimeout(() => {
     terminalEffects.playBootSequence(() => {
