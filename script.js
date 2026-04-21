@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Initialize the application
 function initializeApp() {
+  loadSettings();
+  applyTheme();
+
   // Initialize terminal effects
   terminalEffects.init();
 
@@ -76,7 +79,7 @@ function showSettings() {
   playClickSound();
   showTransition(() => {
     showScreen("settings-screen");
-    loadSettings();
+    updateSettingsUI();
     animateSettingsContent();
   });
 }
@@ -176,14 +179,6 @@ function showSolution() {
     return;
   }
 
-  // Check if solutions are enabled in settings
-  if (gameSettings && gameSettings.showSolution === false) {
-    alert(
-      "Solutions are disabled in settings! Enable 'Show Solutions' in the Settings menu to use this feature."
-    );
-    return;
-  }
-
   if (
     confirm("Are you sure you want to see the solution? You will lose a life.")
   ) {
@@ -262,16 +257,12 @@ function showLoading() {
 
 function hideLoading() {
   const loading = document.getElementById("loading-overlay");
-  console.log("hideLoading called, loading element:", loading);
   if (loading) {
     loading.classList.add("fade-out");
-    console.log("Added fade-out class");
-    // Wait for transition to complete before hiding completely
     setTimeout(() => {
       loading.classList.add("hidden");
       loading.style.display = "none";
-      console.log("Loading overlay hidden");
-    }, 800); // Match the CSS transition duration
+    }, 800);
   }
 }
 
@@ -507,7 +498,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // Settings System
-let gameSettings = {
+const DEFAULT_SETTINGS = {
   lives: 3,
   hints: 2,
   difficulty: "normal",
@@ -517,6 +508,8 @@ let gameSettings = {
   autoProgress: false,
   showSolution: true,
 };
+
+let gameSettings = { ...DEFAULT_SETTINGS };
 
 // Load settings from localStorage
 function loadSettings() {
@@ -528,7 +521,7 @@ function loadSettings() {
 }
 
 // Save settings to localStorage
-function saveSettings() {
+function saveSettings(event) {
   localStorage.setItem("grepMasterSettings", JSON.stringify(gameSettings));
   playClickSound();
 
@@ -669,16 +662,7 @@ function resetToDefaults() {
   playClickSound();
 
   if (confirm("Reset all settings to default values?")) {
-    gameSettings = {
-      lives: 3,
-      hints: 2,
-      difficulty: "normal",
-      soundEnabled: true,
-      animationsEnabled: true,
-      theme: "matrix",
-      autoProgress: false,
-      showSolution: true,
-    };
+    gameSettings = { ...DEFAULT_SETTINGS };
     updateSettingsUI();
     applyTheme();
   }
@@ -687,12 +671,6 @@ function resetToDefaults() {
 // Apply settings to running game
 function applySettingsToGame() {
   if (game) {
-    // Don't change lives/hints mid-challenge, only for new challenges
-    game.defaultLives = gameSettings.lives;
-    game.defaultHints = gameSettings.hints;
-    game.settings = gameSettings;
-
-    // Apply settings immediately
     game.applySettings();
   }
 }
@@ -712,15 +690,6 @@ function animateSettingsContent() {
     }, index * 200);
   });
 }
-
-// Initialize settings on app load
-document.addEventListener("DOMContentLoaded", function () {
-  loadSettings();
-  applyTheme();
-
-  // Ensure settings are available globally
-  window.gameSettings = gameSettings;
-});
 
 // Export for debugging
 window.gameDebug = {

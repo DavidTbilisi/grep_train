@@ -123,7 +123,7 @@ class GrepGameEngine {
     this.challengeStartTime = Date.now();
     this.currentFiles = { ...challenge.files };
     this.timeRemaining = challenge.timeLimit;
-    this.hints = 10; // Reset hints for each challenge
+    this.hints = this.defaultHints;
 
     // Update UI
     document.getElementById("challenge-title").textContent = challenge.title;
@@ -448,52 +448,23 @@ class GrepGameEngine {
       .filter((line) => line && line !== "--");
     const normalizedExpected = expected.map((line) => line.trim());
 
-    // Debug output
-    console.log("Debug - Raw output:", output);
-    console.log("Debug - Expected output:", expected);
-    console.log("Debug - Normalized output:", normalizedOutput);
-    console.log("Debug - Normalized expected:", normalizedExpected);
-
     if (normalizedOutput.length !== normalizedExpected.length) {
-      console.log(
-        "Debug - Length mismatch:",
-        normalizedOutput.length,
-        "vs",
-        normalizedExpected.length
-      );
       return false;
     }
 
-    const result = normalizedOutput.every(
+    return normalizedOutput.every(
       (line, index) =>
         line === normalizedExpected[index] ||
         line.endsWith(normalizedExpected[index])
     );
-
-    console.log("Debug - Match result:", result);
-    return result;
   }
 
   // Get current challenge
   getCurrentChallenge() {
     const level = GAME_DATA.levels.find((l) => l.id === this.currentLevel);
-    if (!level) {
-      console.log("getCurrentChallenge: Level not found", this.currentLevel);
-      return null;
-    }
+    if (!level) return null;
 
-    const challenge = level.challenges.find(
-      (c) => c.id === this.currentChallenge
-    );
-    if (!challenge) {
-      console.log("getCurrentChallenge: Challenge not found", {
-        currentLevel: this.currentLevel,
-        currentChallenge: this.currentChallenge,
-        availableChallenges: level.challenges.map((c) => c.id),
-      });
-    }
-
-    return challenge;
+    return level.challenges.find((c) => c.id === this.currentChallenge);
   }
 
   // Challenge success
@@ -545,36 +516,17 @@ class GrepGameEngine {
   // Next challenge
   nextChallenge() {
     const level = GAME_DATA.levels.find((l) => l.id === this.currentLevel);
-    if (!level) {
-      console.log("Level not found:", this.currentLevel);
-      return;
-    }
+    if (!level) return;
 
     const currentChallengeIndex = level.challenges.findIndex(
       (c) => c.id === this.currentChallenge
     );
-    console.log(
-      "Current challenge index:",
-      currentChallengeIndex,
-      "Challenge ID:",
-      this.currentChallenge
-    );
-
     const nextChallengeIndex = currentChallengeIndex + 1;
 
     if (nextChallengeIndex < level.challenges.length) {
       const nextChallenge = level.challenges[nextChallengeIndex];
       this.currentChallenge = nextChallenge.id;
-
-      // Reset lives and hints for new challenge
       this.lives = this.defaultLives;
-      this.hints = this.defaultHints;
-
-      console.log(
-        "Loading next challenge:",
-        nextChallenge.id,
-        nextChallenge.title
-      );
       this.loadChallenge(nextChallenge);
     } else {
       // Level complete
@@ -627,7 +579,6 @@ class GrepGameEngine {
   // Go back one level when out of lives
   goBackOneLevel() {
     this.currentLevel--;
-    this.currentChallenge = 1;
 
     // Reset lives and hints for the previous level
     this.lives = this.defaultLives;
@@ -704,7 +655,7 @@ class GrepGameEngine {
     this.hints--;
     this.stats.hintsUsed++;
 
-    const hintIndex = 10 - this.hints - 1;
+    const hintIndex = this.defaultHints - this.hints;
     if (hintIndex < challenge.hints.length) {
       this.addOutput(`💡 Hint: ${challenge.hints[hintIndex]}`, "info");
     }
@@ -718,11 +669,6 @@ class GrepGameEngine {
     if (!challenge) {
       this.addOutput("❌ No active challenge found!", "error");
       return;
-    }
-
-    // Apply current settings if not already applied
-    if (!this.settings && typeof gameSettings !== "undefined") {
-      this.applySettings();
     }
 
     // Check if showing solutions is enabled in settings
