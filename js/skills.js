@@ -241,10 +241,14 @@ function detectSkills(command) {
         const end = program.search(/\bEND\b/);
         if (end !== -1 && /\+=|\+\+/.test(program)) found.add("awk-sum");
         // An average (dividing in END), or a running maximum/minimum (compare, then keep a field).
-        if ((end !== -1 && program.slice(end).includes("/")) || (/[<>]\s*[A-Za-z_]\w*/.test(program) && /[A-Za-z_]\w*\s*=\s*\$/.test(program))) {
+        const keepsField = /[A-Za-z_]\w*(\[[^\]]*\])?\s*=\s*\$/.test(program);
+        if ((end !== -1 && program.slice(end).includes("/")) || (/[<>]\s*[A-Za-z_]\w*/.test(program) && keepsField)) {
           found.add("awk-stats");
         }
-        if (/[A-Za-z_]\w*\[[^\]]+\]\s*(\+=|\+\+)|\+\+\s*[A-Za-z_]\w*\[/.test(program)) found.add("awk-group");
+        // Arrays: updating a[key], or looping over one.
+        if (/[A-Za-z_]\w*\[[^\]]+\]\s*(\+=|\+\+|=(?!=))|\+\+\s*[A-Za-z_]\w*\[|for\s*\(\s*\w+\s+in\s+\w+\s*\)/.test(program)) {
+          found.add("awk-group");
+        }
         break;
       }
       case "sort":

@@ -61,11 +61,13 @@ test("every template works, uses its skills, and avoids repeats", () => {
       for (const s of template.skills) assert.ok(used.includes(s), `${label} should use ${s}`);
     }
   }
+  // Avoiding the last two templates cycles through all three of a level.
   for (const skill of SKILLS) {
     for (const d of DIFFICULTIES) {
       for (let seed = 1; seed <= 10; seed++) {
-        const first = generateChallenge(skill.id, d, seed);
-        assert.notEqual(generateChallenge(skill.id, d, seed + 1000, first.template).template, first.template, `${skill.id} d${d}`);
+        const used = [];
+        for (let i = 0; i < 3; i++) used.push(generateChallenge(skill.id, d, seed * 31 + i, used.slice(-2)).template);
+        assert.equal(new Set(used).size, 3, `${skill.id} d${d}: ${used}`);
       }
     }
   }

@@ -298,10 +298,10 @@ function makePredict(challenge, r) {
 
 /**
  * A practice challenge of the given kind ("write", "fix", or "predict").
- * Falls back to a plain write challenge if no variant fits. `avoid` is a
- * template id not to reuse (see generateChallenge).
+ * Falls back to a plain write challenge if no variant fits. `avoid` lists
+ * recently used template ids (see generateChallenge).
  */
-function generateVariant(skill, difficulty, kind, seed, preferKinds = [], avoid = null) {
+function generateVariant(skill, difficulty, kind, seed, preferKinds = [], avoid = []) {
   if (kind !== "write") {
     for (let i = 0; i < 20; i++) {
       const s = (seed + i * 7919) >>> 0;

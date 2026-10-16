@@ -181,6 +181,7 @@ const presentStatuses = (logs) => STATUSES.filter((s) => column(logs["access.log
 const presentPaths = (logs) => [...new Set(column(logs["access.log"], 4))];
 const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
 const presentIps = (logs) => [...new Set(column(logs["access.log"], 2))];
+const presentClasses = (logs) => [...new Set([...logs["error.log"].matchAll(/at (\w+)\./g)].map((m) => m[1]))];
 const presentUsers = (logs) => USERS.filter((user) => logs["app.log"].includes(`User ${user} `));
 
 // Words that appear in app.log in more than one case (so -i matters).
@@ -1505,6 +1506,608 @@ const TEMPLATES = [
     solution: "grep -oE '[0-9]+ms' app.log | sort -n | tail -n 1",
     hints: ["Extract the durations with grep -o.", "sort -n, then the last one.", "grep -oE '[0-9]+ms' app.log | sort -n | tail -n 1"],
   })),
+  // ---------- Third templates for every skill and difficulty ----------
+
+  // grep-basic
+  t(["grep-basic"], 1, (r, logs) => {
+    const cls = r.pick(presentClasses(logs));
+    return {
+      title: `Where is ${cls}?`,
+      description: `Show every line of error.log that mentions ${cls}.`,
+      files: ["error.log"],
+      solution: `grep ${cls} error.log`,
+      hints: ["grep PATTERN FILE.", `The pattern is ${cls}.`, `grep ${cls} error.log`],
+    };
+  }),
+  t(["grep-basic"], 2, (r, logs) => {
+    const status = r.pick(presentStatuses(logs).filter((s) => s !== "200"));
+    return {
+      title: `The ${status}s`,
+      description: `Show every request that got status ${status}.`,
+      files: ["access.log"],
+      solution: `grep ' ${status} ' access.log`,
+      hints: ["Search for the status code.", "A space on each side makes sure it's the status column.", `grep ' ${status} ' access.log`],
+    };
+  }),
+  t(["grep-basic"], 3, () => ({
+    title: "Two files at once",
+    description: "Show every line in access.log AND app.log that mentions /api/orders, with one grep. (grep puts the file name in front of each line.)",
+    files: ["access.log", "app.log"],
+    solution: "grep /api/orders access.log app.log",
+    hints: ["grep accepts several files.", "List both after the pattern.", "grep /api/orders access.log app.log"],
+  })),
+
+  // grep-i
+  t(["grep-i"], 1, () => ({
+    title: "Lowercase method",
+    description: "Show the GET requests, but search for get in lowercase.",
+    files: ["access.log"],
+    solution: "grep -i get access.log",
+    hints: ["get and GET differ only in case.", "-i ignores case.", "grep -i get access.log"],
+  })),
+  t(["grep-i"], 2, (r, logs, run) => {
+    if (run("grep 'database connection' app.log").length === run("grep -i 'database connection' app.log").length) return null;
+    return {
+      title: "The database connection",
+      description: "Show the lines about the database connection, however they're capitalized (Database connection, database connection).",
+      files: ["app.log"],
+      solution: "grep -i 'database connection' app.log",
+      hints: ["Quote the two words, and ignore case.", "-i plus a quoted pattern.", "grep -i 'database connection' app.log"],
+    };
+  }),
+  t(["grep-i", "pipes"], 3, (r, logs, run) => {
+    if (!run("grep -i timeout app.log | grep -v ERROR").length) return null;
+    return {
+      title: "Timeouts that aren't errors",
+      description: "Show the lines that mention a timeout (any case) but are NOT ERROR lines.",
+      files: ["app.log"],
+      solution: "grep -i timeout app.log | grep -v ERROR",
+      hints: ["First the timeout lines, ignoring case.", "Then drop the ERROR ones with grep -v.", "grep -i timeout app.log | grep -v ERROR"],
+    };
+  }),
+
+  // grep-v
+  t(["grep-v"], 1, () => ({
+    title: "Not about users",
+    description: "Show the lines of app.log that are NOT about a user (no User in them).",
+    files: ["app.log"],
+    solution: "grep -v User app.log",
+    hints: ["Invert the match.", "-v User.", "grep -v User app.log"],
+  })),
+  t(["grep-v", "grep-count"], 2, () => ({
+    title: "How many failed?",
+    description: "How many requests did NOT get status 200? Print just the number.",
+    files: ["access.log"],
+    solution: "grep -vc ' 200 ' access.log",
+    hints: ["Invert the match and count.", "-v and -c combine as -vc.", "grep -vc ' 200 ' access.log"],
+  })),
+  t(["grep-v", "pipes"], 3, (r, logs, run) => {
+    if (!run("grep ERROR app.log | grep -vi timeout").length) return null;
+    return {
+      title: "Errors that aren't timeouts",
+      description: "Show the ERROR lines of app.log that are NOT about a timeout (in any case).",
+      files: ["app.log"],
+      solution: "grep ERROR app.log | grep -vi timeout",
+      hints: ["Keep the ERROR lines first.", "Then drop the timeout ones: -v and -i.", "grep ERROR app.log | grep -vi timeout"],
+    };
+  }),
+
+  // grep-count
+  t(["grep-count"], 1, () => ({
+    title: "How many errors?",
+    description: "How many errors are in error.log? Each starts with a line containing ERROR. Print just the number.",
+    files: ["error.log"],
+    solution: "grep -c ERROR error.log",
+    hints: ["Count the ERROR lines.", "-c counts.", "grep -c ERROR error.log"],
+  })),
+  t(["grep-count"], 2, (r, logs) => {
+    const path = r.pick(presentPaths(logs));
+    return {
+      title: `How popular is ${path}?`,
+      description: `How many requests mention ${path}? Print just the number.`,
+      files: ["access.log"],
+      solution: `grep -c ${path} access.log`,
+      hints: ["Count the lines containing the path.", "-c counts.", `grep -c ${path} access.log`],
+    };
+  }),
+  t(["grep-count"], 3, (r, logs) => {
+    const cls = r.pick(presentClasses(logs));
+    return {
+      title: `Through ${cls}`,
+      description: `How many stack-trace lines go through ${cls} (lines with "at ${cls}")? Print just the number.`,
+      files: ["error.log"],
+      solution: `grep -c 'at ${cls}' error.log`,
+      hints: ["Search for at, a space, and the class name.", "Quote it, and count with -c.", `grep -c 'at ${cls}' error.log`],
+    };
+  }),
+
+  // grep-n
+  t(["grep-n"], 1, () => ({
+    title: "Where errors start",
+    description: "Show where each error starts in error.log: the ERROR lines, with their line numbers.",
+    files: ["error.log"],
+    solution: "grep -n ERROR error.log",
+    hints: ["Search for ERROR.", "-n adds line numbers.", "grep -n ERROR error.log"],
+  })),
+  t(["grep-n"], 2, () => ({
+    title: "Slow queries, by line",
+    description: "Show the slow queries in app.log with their line numbers.",
+    files: ["app.log"],
+    solution: "grep -n 'Slow query' app.log",
+    hints: ["Search for 'Slow query', in quotes.", "-n adds line numbers.", "grep -n 'Slow query' app.log"],
+  })),
+  t(["grep-n", "pipes"], 3, () => ({
+    title: "First failed login",
+    description: "On which line of access.log is the first failed login (status 401)? Show that line with its line number.",
+    files: ["access.log"],
+    solution: "grep -n ' 401 ' access.log | head -n 1",
+    hints: ["Number the 401 lines with -n.", "Keep only the first with head.", "grep -n ' 401 ' access.log | head -n 1"],
+  })),
+
+  // grep-or
+  t(["grep-or"], 1, () => ({
+    title: "In and out",
+    description: "Show the lines where a user logged in or logged out, with one grep.",
+    files: ["app.log"],
+    solution: "grep -E 'logged in|logged out' app.log",
+    hints: ["Use -E for either/or.", "'logged in|logged out', in quotes.", "grep -E 'logged in|logged out' app.log"],
+  })),
+  t(["grep-or"], 2, () => ({
+    title: "Both spellings",
+    description: "Show every line that says Timeout or timeout, without using -i: list both spellings.",
+    files: ["app.log"],
+    solution: "grep -E 'Timeout|timeout' app.log",
+    hints: ["Either spelling: A|B.", "Use -E and quote the pattern.", "grep -E 'Timeout|timeout' app.log"],
+  })),
+  t(["grep-or"], 3, (r, logs, run) => {
+    if (!run("grep -E ' (401|404) ' access.log").length) return null;
+    return {
+      title: "A group",
+      description: "Show the requests with status 401 or 404, using one pattern with a group: a space, (401|404), and a space.",
+      files: ["access.log"],
+      solution: "grep -E ' (401|404) ' access.log",
+      hints: ["Parentheses group alternatives inside a bigger pattern.", "' (401|404) ' with -E.", "grep -E ' (401|404) ' access.log"],
+    };
+  }),
+
+  // head-tail
+  t(["head-tail"], 1, (r) => {
+    const n = r.int(3, 6);
+    return {
+      title: "The start of the errors",
+      description: `Show the first ${n} lines of error.log.`,
+      files: ["error.log"],
+      solution: `head -n ${n} error.log`,
+      hints: ["Use head.", "-n sets how many lines.", `head -n ${n} error.log`],
+    };
+  }),
+  t(["head-tail"], 2, () => ({
+    title: "Latest entry",
+    description: "What's the latest entry in app.log? Show just the last line.",
+    files: ["app.log"],
+    solution: "tail -n 1 app.log",
+    hints: ["New entries go at the bottom.", "tail -n 1.", "tail -n 1 app.log"],
+  })),
+  t(["head-tail", "pipes"], 3, (r) => {
+    const from = r.int(2, 5);
+    const to = from + r.int(2, 4);
+    return {
+      title: `Lines ${from} to ${to}`,
+      description: `Show lines ${from} to ${to} of access.log.`,
+      files: ["access.log"],
+      solution: `head -n ${to} access.log | tail -n ${to - from + 1}`,
+      hints: [`Take the first ${to} lines...`, `...then the last ${to - from + 1} of those.`, `head -n ${to} access.log | tail -n ${to - from + 1}`],
+    };
+  }),
+
+  // wc
+  t(["wc"], 1, () => ({
+    title: "Two files, one command",
+    description: "Count the lines of app.log and access.log with one wc command. (It prints a count for each, then a total.)",
+    files: ["app.log", "access.log"],
+    solution: "wc -l app.log access.log",
+    hints: ["wc accepts several files.", "wc -l with both names.", "wc -l app.log access.log"],
+  })),
+  t(["wc"], 2, () => ({
+    title: "Word count",
+    description: "How many words are in app.log?",
+    files: ["app.log"],
+    solution: "wc -w app.log",
+    hints: ["wc counts words too.", "-w means words.", "wc -w app.log"],
+  })),
+  t(["wc"], 3, () => ({
+    title: "How big?",
+    description: "How big is error.log, in bytes?",
+    files: ["error.log"],
+    solution: "wc -c error.log",
+    hints: ["wc can count bytes.", "-c means bytes (characters).", "wc -c error.log"],
+  })),
+
+  // pipes
+  t(["pipes"], 1, (r) => {
+    const level = r.pick(LEVELS);
+    return {
+      title: "cat into grep",
+      description: `Show the ${level} lines of app.log by piping cat into grep.`,
+      files: ["app.log"],
+      solution: `cat app.log | grep ${level}`,
+      hints: ["cat prints the file.", "| grep filters what cat prints.", `cat app.log | grep ${level}`],
+    };
+  }),
+  t(["pipes", "head-tail"], 2, (r, logs, run) => {
+    const path = r.pick(presentPaths(logs).filter((p) => run(`grep ${p} access.log`).length >= 2));
+    if (!path) return null;
+    return {
+      title: `First two for ${path}`,
+      description: `Show the first two requests for ${path}.`,
+      files: ["access.log"],
+      solution: `grep ${path} access.log | head -n 2`,
+      hints: ["Find the requests for that path.", "Keep the first two with head.", `grep ${path} access.log | head -n 2`],
+    };
+  }),
+  t(["pipes", "grep-v"], 3, (r, logs, run) => {
+    if (!run("grep POST access.log | grep -v ' 200 '").length) return null;
+    return {
+      title: "Failed POSTs",
+      description: "Show the POST requests that did not succeed (status other than 200).",
+      files: ["access.log"],
+      solution: "grep POST access.log | grep -v ' 200 '",
+      hints: ["Keep the POST lines.", "Then drop the 200s.", "grep POST access.log | grep -v ' 200 '"],
+    };
+  }),
+
+  // columns
+  t(["columns"], 1, () => ({
+    title: "Just the levels",
+    description: "Print only the log level of each line of app.log (column 3).",
+    files: ["app.log"],
+    solution: "awk '{print $3}' app.log",
+    hints: ["awk numbers the columns $1, $2, ...", "The level is $3.", "awk '{print $3}' app.log"],
+  })),
+  t(["columns"], 2, () => ({
+    title: "Swap the order",
+    description: "Print the path, then the IP, of each request: columns 4 and 2, in that order.",
+    files: ["access.log"],
+    solution: "awk '{print $4, $2}' access.log",
+    hints: ["awk prints columns in whatever order you list them.", "print $4, $2.", "awk '{print $4, $2}' access.log"],
+  })),
+  t(["columns", "pipes"], 3, () => ({
+    title: "Just the messages",
+    description: "Print just the message of each ERROR line in app.log: everything from column 4 on.",
+    files: ["app.log"],
+    solution: "grep ERROR app.log | cut -d' ' -f4-",
+    hints: ["Keep the ERROR lines.", "cut -f4- means field 4 to the end.", "grep ERROR app.log | cut -d' ' -f4-"],
+  })),
+
+  // sort-uniq
+  t(["sort-uniq"], 1, () => ({
+    title: "Which statuses?",
+    description: "List each status code that appears in access.log once, sorted. (Column 5.)",
+    files: ["access.log"],
+    solution: "awk '{print $5}' access.log | sort -u",
+    hints: ["Print column 5.", "sort -u sorts and drops repeats.", "awk '{print $5}' access.log | sort -u"],
+  })),
+  t(["sort-uniq", "columns"], 2, () => ({
+    title: "Distinct errors",
+    description: "List each distinct ERROR message in app.log once, sorted.",
+    files: ["app.log"],
+    solution: "grep ERROR app.log | cut -d' ' -f4- | sort -u",
+    hints: ["Keep the ERROR lines and cut out the message (-f4-).", "Then sort -u.", "grep ERROR app.log | cut -d' ' -f4- | sort -u"],
+  })),
+  t(["sort-uniq"], 3, () => ({
+    title: "Repeat visitors",
+    description: "Which IPs made more than one request? List each once, sorted. (uniq -d keeps only repeated lines.)",
+    files: ["access.log"],
+    solution: "awk '{print $2}' access.log | sort | uniq -d",
+    hints: ["Print the IP column, then sort.", "uniq -d prints one copy of each repeated line.", "awk '{print $2}' access.log | sort | uniq -d"],
+  })),
+
+  // uniq-count
+  t(["uniq-count"], 1, () => ({
+    title: "Requests per path",
+    description: "How many requests did each path get?",
+    files: ["access.log"],
+    solution: "awk '{print $4}' access.log | sort | uniq -c",
+    hints: ["Print the path, column 4.", "sort, then uniq -c.", "awk '{print $4}' access.log | sort | uniq -c"],
+  })),
+  t(["uniq-count", "columns"], 2, () => ({
+    title: "Requests per minute",
+    description: "Count the requests per minute. The minute is the middle part of the time (10:31:05 -> 31).",
+    files: ["access.log"],
+    solution: "awk '{print $1}' access.log | cut -d: -f2 | sort | uniq -c",
+    hints: ["Print the time, then cut it on ':' and keep field 2.", "Then sort | uniq -c.", "awk '{print $1}' access.log | cut -d: -f2 | sort | uniq -c"],
+  })),
+  t(["uniq-count", "awk-filter"], 3, () => ({
+    title: "Ins and outs per user",
+    description: "For each user, count logins and logouts separately: count each 'name in' and 'name out' pair. (Name is column 5, in/out is column 7.)",
+    files: ["app.log"],
+    solution: "awk '/logged/ {print $5, $7}' app.log | sort | uniq -c",
+    hints: ["Print columns 5 and 7 of the 'logged' lines.", "Then sort | uniq -c.", "awk '/logged/ {print $5, $7}' app.log | sort | uniq -c"],
+  })),
+
+  // awk-filter
+  t(["awk-filter"], 1, () => ({
+    title: "WARN with awk",
+    description: "Using awk, show the WARN lines of app.log (the level is column 3).",
+    files: ["app.log"],
+    solution: "awk '$3 == \"WARN\"' app.log",
+    hints: ["awk 'CONDITION' prints matching lines.", "Compare text in quotes: $3 == \"WARN\".", "awk '$3 == \"WARN\"' app.log"],
+  })),
+  t(["awk-filter", "columns"], 2, (r, logs) => {
+    const sizes = column(logs["access.log"], 6).map(Number).sort((a, b) => a - b);
+    const limit = Math.ceil(sizes[Math.floor(sizes.length / 3)] / 100) * 100;
+    return {
+      title: "Small responses",
+      description: `Show the path and size of every response smaller than ${limit} bytes.`,
+      files: ["access.log"],
+      solution: `awk '$6 < ${limit} {print $4, $6}' access.log`,
+      hints: ["awk can compare numbers.", `$6 < ${limit}, then print $4, $6.`, `awk '$6 < ${limit} {print $4, $6}' access.log`],
+    };
+  }),
+  t(["awk-filter", "columns"], 3, () => ({
+    title: "Anything login",
+    description: "For every request whose path contains login, print the IP and the status. (~ /login/ matches a regex inside a column.)",
+    files: ["access.log"],
+    solution: "awk '$4 ~ /login/ {print $2, $5}' access.log",
+    hints: ["$4 ~ /login/ is true when column 4 contains login.", "Then print $2, $5.", "awk '$4 ~ /login/ {print $2, $5}' access.log"],
+  })),
+
+  // top-n
+  t(["top-n"], 1, (r, logs, run) => {
+    const report = "awk '{print $3}' app.log | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Most common level",
+      description: "Which log level is the most common in app.log? Show its count and the level.",
+      files: ["app.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["Count each level (column 3) with uniq -c.", "sort -rn, then head -n 1.", `${report} | head -n 1`],
+    };
+  }),
+  t(["top-n"], 2, (r) => {
+    const k = r.int(2, 4);
+    return {
+      title: `The ${k} biggest`,
+      description: `Show the ${k} largest responses (full lines), biggest first. Size is column 6.`,
+      files: ["access.log"],
+      solution: `sort -k6 -rn access.log | head -n ${k}`,
+      hints: ["sort -k6 sorts by column 6.", `-rn for biggest first, then head -n ${k}.`, `sort -k6 -rn access.log | head -n ${k}`],
+    };
+  }),
+  t(["top-n", "columns"], 3, (r, logs, run) => {
+    const report = "grep ERROR error.log | cut -d' ' -f4- | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Top error",
+      description: "Which error message appears most often in error.log? Show its count and the message.",
+      files: ["error.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["Keep the ERROR lines and cut out the message (-f4-).", "Then sort | uniq -c | sort -rn | head -n 1.", `${report} | head -n 1`],
+    };
+  }),
+
+  // awk-sum
+  t(["awk-sum"], 1, () => ({
+    title: "Count errors with awk",
+    description: "Count the ERROR lines of app.log with awk: add 1 on each /ERROR/ line, print the count at the END.",
+    files: ["app.log"],
+    solution: "awk '/ERROR/ {n++} END {print n}' app.log",
+    hints: ["/ERROR/ {n++} counts matching lines.", "Print n in an END block.", "awk '/ERROR/ {n++} END {print n}' app.log"],
+  })),
+  t(["awk-sum", "awk-filter"], 2, (r) => {
+    const method = r.pick(["GET", "POST"]);
+    return {
+      title: `${method} traffic`,
+      description: `How many bytes did the ${method} requests add up to? Print just the number.`,
+      files: ["access.log"],
+      solution: `awk '$3 == "${method}" {s += $6} END {print s}' access.log`,
+      hints: ["Only add up the lines for that method.", `$3 == "${method}" {s += $6}, then print s at the END.`, `awk '$3 == "${method}" {s += $6} END {print s}' access.log`],
+    };
+  }),
+  t(["awk-sum"], 3, () => ({
+    title: "Traffic in KB",
+    description: "How much traffic was there in total, in kilobytes (bytes / 1024)? Print it the way awk's print shows numbers.",
+    files: ["access.log"],
+    solution: "awk '{s += $6} END {print s / 1024}' access.log",
+    hints: ["Add up column 6.", "Divide by 1024 when you print it at the END.", "awk '{s += $6} END {print s / 1024}' access.log"],
+  })),
+
+  // awk-stats
+  t(["awk-stats"], 1, () => ({
+    title: "Biggest, with if",
+    description: "What's the largest response size? This time use an if inside the action: {if ($6 > max) max = $6}.",
+    files: ["access.log"],
+    solution: "awk '{if ($6 > max) max = $6} END {print max}' access.log",
+    hints: ["if (condition) statement works inside { }.", "Print max at the END.", "awk '{if ($6 > max) max = $6} END {print max}' access.log"],
+  })),
+  t(["awk-stats"], 2, () => ({
+    title: "Who got the biggest?",
+    description: "Which IP got the single largest response? Print the IP and the size.",
+    files: ["access.log"],
+    solution: "awk '$6 > max {max = $6; ip = $2} END {print ip, max}' access.log",
+    hints: ["Keep the biggest size and, at the same time, its IP.", "$6 > max {max = $6; ip = $2}.", "awk '$6 > max {max = $6; ip = $2} END {print ip, max}' access.log"],
+  })),
+  t(["awk-stats"], 3, () => ({
+    title: "Average in KB",
+    description: "What's the average response size in kilobytes, with exactly two decimal places?",
+    files: ["access.log"],
+    solution: "awk '{s += $6} END {printf \"%.2f\\n\", s / NR / 1024}' access.log",
+    hints: ["Average = total / NR; KB = bytes / 1024.", "printf \"%.2f\\n\" prints two decimals.", "awk '{s += $6} END {printf \"%.2f\\n\", s / NR / 1024}' access.log"],
+  })),
+
+  // awk-group
+  t(["awk-group"], 1, () => ({
+    title: "Levels, awk style",
+    description: "Count the lines per log level of app.log with an awk array. Print each level and its count, sorted.",
+    files: ["app.log"],
+    solution: "awk '{n[$3]++} END {for (l in n) print l, n[l]}' app.log | sort",
+    hints: ["n[$3]++ counts per level.", "Print each level and count at the END, then sort.", "awk '{n[$3]++} END {for (l in n) print l, n[l]}' app.log | sort"],
+  })),
+  t(["awk-group", "pipes"], 2, () => ({
+    title: "Busiest IPs, awk style",
+    description: "Count requests per IP with an awk array. Print the count, then the IP, busiest first.",
+    files: ["access.log"],
+    solution: "awk '{n[$2]++} END {for (ip in n) print n[ip], ip}' access.log | sort -rn",
+    hints: ["n[$2]++ counts per IP.", "Print count first, then sort -rn.", "awk '{n[$2]++} END {for (ip in n) print n[ip], ip}' access.log | sort -rn"],
+  })),
+  t(["awk-group", "awk-stats"], 3, () => ({
+    title: "Biggest per path",
+    description: "What's the largest response for each path? Print each path and its largest size, sorted by path.",
+    files: ["access.log"],
+    solution: "awk '{if ($6 > max[$4]) max[$4] = $6} END {for (p in max) print p, max[p]}' access.log | sort",
+    hints: ["Keep a maximum per path in an array: max[$4].", "Update it with if, print at the END, then sort.", "awk '{if ($6 > max[$4]) max[$4] = $6} END {for (p in max) print p, max[p]}' access.log | sort"],
+  })),
+
+  // regex-anchors
+  t(["regex-anchors"], 1, () => ({
+    title: "Ends with ms",
+    description: "Show the lines of app.log that end with ms.",
+    files: ["app.log"],
+    solution: "grep 'ms$' app.log",
+    hints: ["$ matches the end of a line.", "'ms$'.", "grep 'ms$' app.log"],
+  })),
+  t(["regex-anchors", "grep-v"], 2, () => ({
+    title: "No stack traces",
+    description: "Show error.log without its stack traces: drop the lines that start with a space.",
+    files: ["error.log"],
+    solution: "grep -v '^ ' error.log",
+    hints: ["'^ ' matches lines starting with a space.", "-v drops them.", "grep -v '^ ' error.log"],
+  })),
+  t(["regex-anchors", "grep-or"], 3, (r, logs, run) => {
+    if (!run("grep -E '(lost|exceeded)$' error.log").length) return null;
+    return {
+      title: "Lost or exceeded",
+      description: "Show the error lines of error.log that end with lost or with exceeded.",
+      files: ["error.log"],
+      solution: "grep -E '(lost|exceeded)$' error.log",
+      hints: ["Group the alternatives, then anchor the end.", "(lost|exceeded)$ with -E.", "grep -E '(lost|exceeded)$' error.log"],
+    };
+  }),
+
+  // regex-classes
+  t(["regex-classes"], 1, (r, logs, run) => {
+    if (!run("grep 'ratio 0\\.[89]' app.log").length) return null;
+    return {
+      title: "Good cache days",
+      description: "Show the cache hit ratios of 0.80 or more (lines like Cache hit ratio 0.82).",
+      files: ["app.log"],
+      solution: "grep 'ratio 0\\.[89]' app.log",
+      hints: ["The first digit after 0. is 8 or 9: [89].", "Escape the dot: 0\\.", "grep 'ratio 0\\.[89]' app.log"],
+    };
+  }),
+  t(["regex-classes"], 2, (r, logs, run) => {
+    if (!run("grep 'at 9[0-9]%' app.log").length) return null;
+    return {
+      title: "Memory alarms",
+      description: "Show the memory warnings of 90% or more (lines like Memory usage at 91%).",
+      files: ["app.log"],
+      solution: "grep 'at 9[0-9]%' app.log",
+      hints: ["90 to 99 is a 9 followed by any digit.", "'at 9[0-9]%'.", "grep 'at 9[0-9]%' app.log"],
+    };
+  }),
+  t(["regex-classes"], 3, (r, logs, run) => {
+    if (!run("grep 'java:[0-9]*[05])' error.log").length) return null;
+    return {
+      title: "Round line numbers",
+      description: "Show the stack-trace lines whose line number ends in 0 or 5.",
+      files: ["error.log"],
+      solution: "grep 'java:[0-9]*[05])' error.log",
+      hints: ["Any digits, then a 0 or 5, then the closing parenthesis.", "[0-9]* then [05] then ).", "grep 'java:[0-9]*[05])' error.log"],
+    };
+  }),
+
+  // grep-w
+  t(["grep-w"], 1, (r, logs, run) => {
+    const words = run("grep -w at app.log").length;
+    if (!words || words === run("grep at app.log").length) return null;
+    return {
+      title: "at, not Database",
+      description: "Show the lines of app.log that contain the word at on its own (as in Memory usage at 91%), not inside Database.",
+      files: ["app.log"],
+      solution: "grep -w at app.log",
+      hints: ["grep at also matches inside Database.", "-w matches whole words.", "grep -w at app.log"],
+    };
+  }),
+  t(["grep-w", "grep-count"], 2, (r, logs, run) => {
+    const count = run("grep -wc on app.log")[0];
+    if (count === "0" || count === run("grep -c on app.log")[0]) return null;
+    return {
+      title: "The word on",
+      description: "How many lines of app.log contain the word on on its own (not inside Connection or configuration)? Print just the number.",
+      files: ["app.log"],
+      solution: "grep -wc on app.log",
+      hints: ["Whole words only, and count.", "-wc.", "grep -wc on app.log"],
+    };
+  }),
+  t(["grep-w", "grep-or"], 3, (r, logs, run) => {
+    if (run("grep -wE 'in|out' app.log").length === run("grep -E 'in|out' app.log").length) return null;
+    return {
+      title: "in or out, as words",
+      description: "Show the lines with the word in or the word out on its own (not inside Loading or timeout).",
+      files: ["app.log"],
+      solution: "grep -wE 'in|out' app.log",
+      hints: ["Either word: -E 'in|out'.", "Whole words: add -w.", "grep -wE 'in|out' app.log"],
+    };
+  }),
+
+  // regex-repeat
+  t(["regex-repeat"], 1, (r, logs, run) => {
+    if (!run("grep '%' app.log").length) return null;
+    return {
+      title: "Percentages",
+      description: "Show the lines with a percentage in them: one or more digits, then %.",
+      files: ["app.log"],
+      solution: "grep -E '[0-9]+%' app.log",
+      hints: ["With -E, + means one or more.", "[0-9]+ then %.", "grep -E '[0-9]+%' app.log"],
+    };
+  }),
+  t(["regex-repeat", "regex-anchors"], 2, (r, logs, run) => {
+    if (run("grep -E ' [0-9]{4}$' access.log").length === run("cat access.log").length) return null;
+    return {
+      title: "Four-digit sizes",
+      description: "Show the responses whose size has exactly four digits (1000 to 9999 bytes). Size is the last column.",
+      files: ["access.log"],
+      solution: "grep -E ' [0-9]{4}$' access.log",
+      hints: ["A space, four digits, then the end of the line.", "' [0-9]{4}$' with -E.", "grep -E ' [0-9]{4}$' access.log"],
+    };
+  }),
+  t(["regex-repeat", "grep-o"], 3, () => ({
+    title: "Long durations only",
+    description: "Print just the durations of 1000ms or more (four or more digits before ms), one per line.",
+    files: ["app.log"],
+    solution: "grep -oE '[0-9]{4,}ms' app.log",
+    hints: ["{4,} means four or more.", "Use -o to print only the match.", "grep -oE '[0-9]{4,}ms' app.log"],
+  })),
+
+  // grep-o
+  t(["grep-o"], 1, (r, logs, run) => {
+    if (!run("grep report- app.log").length) return null;
+    return {
+      title: "Report names",
+      description: "Print just the report names from app.log (like report-3), one per line.",
+      files: ["app.log"],
+      solution: "grep -oE 'report-[0-9]+' app.log",
+      hints: ["-o prints only the match.", "report- then [0-9]+.", "grep -oE 'report-[0-9]+' app.log"],
+    };
+  }),
+  t(["grep-o"], 2, () => ({
+    title: "Frames by class",
+    description: "Print 'at' and the class name of each stack frame in error.log (like at PaymentClient), one per line.",
+    files: ["error.log"],
+    solution: "grep -oE 'at [A-Za-z]+' error.log",
+    hints: ["-o prints only the match.", "at, a space, then [A-Za-z]+.", "grep -oE 'at [A-Za-z]+' error.log"],
+  })),
+  t(["grep-o", "top-n"], 3, (r, logs, run) => {
+    const report = "grep -oE 'User [a-z]+' app.log | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Busiest user",
+      description: "Which user appears in the most 'User ...' lines? Show the count and 'User name'.",
+      files: ["app.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["Extract 'User name' with grep -o.", "Then sort | uniq -c | sort -rn | head -n 1.", `${report} | head -n 1`],
+    };
+  }),
 ];
 
 // Placement test: each question needs several skills at once. Passing one
@@ -1626,13 +2229,17 @@ function build(templates, seed, extra) {
 
 /**
  * A practice challenge for `skill` at `difficulty` (1-3). Same seed, same
- * challenge. `avoid` is a template id not to use (the previous challenge's),
- * unless it's the only one.
+ * challenge. `avoid` lists template ids used recently, oldest first; they're
+ * skipped while other templates remain (dropping the oldest first).
  */
-function generateChallenge(skill, difficulty, seed, avoid = null) {
+function generateChallenge(skill, difficulty, seed, avoid = []) {
   const templates = templatesFor(skill, difficulty);
-  const fresh = templates.filter((template) => template.id !== avoid);
-  return build(fresh.length ? fresh : templates, seed, { skill });
+  for (let skip = 0; skip <= avoid.length; skip++) {
+    const recent = avoid.slice(skip);
+    const fresh = templates.filter((template) => !recent.includes(template.id));
+    if (fresh.length) return build(fresh, seed, { skill });
+  }
+  return build(templates, seed, { skill });
 }
 
 /** A challenge from one specific template (for tests). */

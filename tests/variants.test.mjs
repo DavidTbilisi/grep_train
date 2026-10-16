@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MUTATIONS, mutants, makeFix, makePredict, generateVariant } from "../js/variants.js";
-import { generateChallenge, makeRng } from "../js/generator.js";
+import { generateChallenge, generateFromTemplate, makeRng, TEMPLATES } from "../js/generator.js";
 import { normalize } from "../js/diagnose.js";
 import { runCommandLine } from "../js/shell.js";
 import { SKILLS, SKILL_BY_ID } from "../js/skills.js";
@@ -68,7 +68,9 @@ test("fix challenges start from a broken command and keep the real solution", ()
 });
 
 test("fix prefers the player's common mistakes", () => {
-  const c = generateChallenge("uniq-count", 1, 1);
+  // The level histogram: awk '{print $3}' app.log | sort | uniq -c
+  const histogram = TEMPLATES.find((t) => t.skills[0] === "uniq-count" && t.difficulty === 1);
+  const c = generateFromTemplate(histogram.id, 1);
   const fix = makeFix(c, makeRng(1), ["uniq-unsorted"]);
   assert.equal(fix.bugKind, "uniq-unsorted");
   assert.equal(makeFix(c, makeRng(1), ["missing-counts"]).bugKind, "missing-counts");

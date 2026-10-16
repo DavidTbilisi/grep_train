@@ -101,6 +101,7 @@ class GrepGameEngine {
     this.pick = null; // the scheduler's choice behind the current practice challenge
     this.focus = null; // a skill the player chose on the skill map
     this.recent = []; // skills of the latest practice challenges
+    this.recentTemplates = {}; // skill -> its last two template ids, so practice cycles through them
     this.placement = null; // { step, granted, finished }
     this.incident = null; // { data, step, points, notes, finished }
     this.gameStarted = false;
@@ -286,9 +287,10 @@ class GrepGameEngine {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([mistake]) => mistake);
-    // Don't reuse the template of the previous challenge on the same skill.
-    const previous = this.challenge?.skill === this.pick.skill ? this.challenge.template : null;
-    this.setChallenge(generateVariant(this.pick.skill, this.pick.difficulty, kind, randomSeed(), commonMistakes, previous));
+    const { skill } = this.pick;
+    const challenge = generateVariant(skill, this.pick.difficulty, kind, randomSeed(), commonMistakes, this.recentTemplates[skill] || []);
+    this.recentTemplates[skill] = [...(this.recentTemplates[skill] || []), challenge.template].slice(-2);
+    this.setChallenge(challenge);
   }
 
   loadPlacementStep() {
