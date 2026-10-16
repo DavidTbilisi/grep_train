@@ -55,7 +55,7 @@ const APP_MESSAGES = {
     (r) => `Session ${r.int(4096, 65535).toString(16)} refreshed`,
   ],
   WARN: [
-    (r) => `Slow query took ${r.int(1200, 4800)}ms`,
+    (r) => `Slow query took ${r.int(300, 4800)}ms`,
     (r) => `Memory usage at ${r.int(85, 97)}%`,
     () => "Retrying database connection",
     () => "Connection timeout to cache, retrying",
@@ -92,8 +92,8 @@ const pad = (n) => String(n).padStart(2, "0");
 const clock = (seconds) => `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
 
 function generateAppLog(r) {
-  const count = r.int(12, 16);
-  const levels = ["ERROR", "ERROR", "WARN", "WARN", "DEBUG", "INFO", "INFO"];
+  const count = r.int(13, 17);
+  const levels = ["ERROR", "ERROR", "WARN", "WARN", "WARN", "DEBUG", "INFO", "INFO"];
   while (levels.length < count) levels.push(r.pick(["INFO", "INFO", "INFO", "DEBUG", "WARN", "ERROR"]));
   const date = `2024-${pad(r.int(1, 12))}-${pad(r.int(1, 28))}`;
   let time = r.int(8, 15) * 3600 + r.int(0, 59) * 60;
@@ -101,10 +101,12 @@ function generateAppLog(r) {
     time += r.int(1, 9);
     return { time, level, message: r.pick(APP_MESSAGES[level])(r) };
   });
-  // Make sure "timeout" appears in lower case too, for grep -i challenges.
-  if (!entries.some((e) => e.message.includes("timeout"))) {
-    r.pick(entries.filter((e) => e.level === "WARN")).message = "Connection timeout to cache, retrying";
-  }
+  // Guarantee material for some templates: "timeout" in lower case (grep -i),
+  // and slow queries under 1000ms and over 2000ms (regex repeat counts).
+  const [warn1, warn2, warn3] = r.shuffle(entries.filter((e) => e.level === "WARN"));
+  warn1.message = "Connection timeout to cache, retrying";
+  warn2.message = `Slow query took ${r.int(300, 999)}ms`;
+  warn3.message = `Slow query took ${r.int(2000, 4800)}ms`;
   return entries.map((e) => `${date} ${clock(e.time)} ${e.level} ${e.message}`).join("\n") + "\n";
 }
 
@@ -142,8 +144,32 @@ function generateAccessLog(r) {
   }
 }
 
+// error.log: ERROR entries, each followed by an indented Java-style stack trace.
+const TRACES = [
+  { message: () => "Timeout calling payment service", frames: ["PaymentClient.charge", "CheckoutService.submit", "HttpServer.handle"] },
+  { message: () => "Database connection lost", frames: ["ConnectionPool.borrow", "OrderRepository.save", "CheckoutService.submit"] },
+  { message: () => "Request timeout on /api/orders", frames: ["OrderController.list", "HttpServer.handle"] },
+  { message: () => "Disk quota exceeded", frames: ["ReportWriter.flush", "ReportJob.run"] },
+  { message: (r) => `Failed to send email to ${r.pick(USERS)}`, frames: ["EmailSender.send", "NotificationService.notify", "HttpServer.handle"] },
+];
+
+function generateErrorLog(r) {
+  const date = `2024-${pad(r.int(1, 12))}-${pad(r.int(1, 28))}`;
+  let time = r.int(8, 15) * 3600 + r.int(0, 59) * 60;
+  const out = [];
+  for (let i = 0, count = r.int(4, 6); i < count; i++) {
+    const trace = r.pick(TRACES);
+    time += r.int(5, 40);
+    out.push(`${date} ${clock(time)} ERROR ${trace.message(r)}`);
+    for (const frame of trace.frames.slice(0, r.int(2, trace.frames.length))) {
+      out.push(`    at ${frame}(${frame.split(".")[0]}.java:${r.int(12, 260)})`);
+    }
+  }
+  return out.join("\n") + "\n";
+}
+
 function generateLogs(r) {
-  return { "app.log": generateAppLog(r), "access.log": generateAccessLog(r) };
+  return { "app.log": generateAppLog(r), "access.log": generateAccessLog(r), "error.log": generateErrorLog(r) };
 }
 
 // ---------- Helpers for templates ----------
@@ -162,6 +188,14 @@ function mixedCaseWords(logs) {
 }
 
 // Counts from a `uniq -c` style output, biggest first.
+// Last words of app.log lines that also appear elsewhere, so $ matters.
+function endingWords(logs, run) {
+  const words = new Set(lines(logs["app.log"]).map((line) => line.split(" ").pop()));
+  return [...words].filter(
+    (w) => /^[a-z]{4,}$/.test(w) && run(`grep ${w} app.log`).length > run(`grep '${w}$' app.log`).length
+  );
+}
+
 const counts = (output) => output.map((line) => parseInt(line, 10));
 
 // Does a ranked report have a clear cut after the first k rows?
@@ -651,6 +685,157 @@ const TEMPLATES = [
       hints: ["sort -k N sorts by column N.", "Sort column 6 numerically, biggest first, and keep the top line.", "sort -k6 -rn access.log | head -n 1"],
     };
   }),
+
+  // regex-anchors
+  t(["regex-anchors"], 1, (r, logs, run) => {
+    const words = endingWords(logs, run);
+    if (!words.length) return null;
+    const word = r.pick(words);
+    return {
+      title: `Ends with ${word}`,
+      description: `Show the lines of app.log that END with the word ${word} (not the ones that just mention it).`,
+      files: ["app.log"],
+      solution: `grep '${word}$' app.log`,
+      hints: ["$ matches the end of a line.", `Put $ right after the word, inside quotes: '${word}$'.`, `grep '${word}$' app.log`],
+    };
+  }),
+  t(["regex-anchors", "grep-count"], 2, (r, logs, run) => {
+    // Only when the shortcut grep -c at is wrong (at also appears inside Database).
+    if (run("grep -c at error.log")[0] === run("grep -c '^ ' error.log")[0]) return null;
+    return {
+      title: "Count the stack frames",
+      description: "How many stack-trace lines are in error.log? They're the lines that start with a space. Print just the number.",
+      files: ["error.log"],
+      solution: "grep -c '^ ' error.log",
+      hints: ["^ matches the start of a line.", "'^ ' is a line that starts with a space; -c counts.", "grep -c '^ ' error.log"],
+    };
+  }),
+  t(["regex-anchors", "regex-classes"], 3, () => ({
+    title: "Just the error lines",
+    description: "Show only the first line of each error in error.log: the lines that do NOT start with a space. Use ^ and a character class.",
+    files: ["error.log"],
+    solution: "grep '^[^ ]' error.log",
+    hints: ["^ anchors the pattern to the start of the line.", "[^ ] means any character except a space.", "grep '^[^ ]' error.log"],
+  })),
+
+  // regex-classes
+  t(["regex-classes"], 1, (r) => {
+    const [from, to] = r.pick([["a", "c"], ["b", "d"], ["c", "e"]]);
+    return {
+      title: `Users ${from} to ${to}`,
+      description: `Show the "User ..." lines of app.log about users whose name starts with a letter from ${from} to ${to}.`,
+      files: ["app.log"],
+      solution: `grep 'User [${from}-${to}]' app.log`,
+      hints: [`[${from}-${to}] matches any one letter from ${from} to ${to}.`, "Search for User, a space, then the class.", `grep 'User [${from}-${to}]' app.log`],
+    };
+  }),
+  t(["regex-classes"], 2, () => ({
+    title: "Client errors",
+    description: "Show every request in access.log that got a 4xx status (any code from 400 to 499).",
+    files: ["access.log"],
+    solution: "grep ' 4[0-9][0-9] ' access.log",
+    hints: ["[0-9] matches any one digit.", "The status has a space on each side: ' 4[0-9][0-9] '.", "grep ' 4[0-9][0-9] ' access.log"],
+  })),
+  t(["regex-classes"], 3, () => ({
+    title: "Every failure",
+    description: "Show every request in access.log that failed: status 4xx or 5xx. Use one character class for the first digit.",
+    files: ["access.log"],
+    solution: "grep ' [45][0-9][0-9] ' access.log",
+    hints: ["[45] matches a 4 or a 5.", "Then two digits, with a space on each side.", "grep ' [45][0-9][0-9] ' access.log"],
+  })),
+
+  // grep-w
+  t(["grep-w"], 1, (r, logs, run) => {
+    if (run("grep in app.log").length === run("grep -w in app.log").length) return null;
+    return {
+      title: "The word in",
+      description: "Show the lines of app.log that contain the word in on its own, not inside words like Loading or finished.",
+      files: ["app.log"],
+      solution: "grep -w in app.log",
+      hints: ["grep in also matches the in inside other words.", "-w matches whole words only.", "grep -w in app.log"],
+    };
+  }),
+  t(["grep-w", "grep-count"], 2, (r, logs, run) => {
+    if (run("grep -c at error.log")[0] === run("grep -wc at error.log")[0]) return null;
+    return {
+      title: "The word at",
+      description: "How many lines of error.log contain the word at on its own? (The at inside Database doesn't count.) Print just the number.",
+      files: ["error.log"],
+      solution: "grep -wc at error.log",
+      hints: ["Match whole words only, and count.", "-w and -c combine as -wc.", "grep -wc at error.log"],
+    };
+  }),
+  t(["grep-w", "grep-v"], 3, (r, logs, run) => {
+    if (run("grep -v in app.log").length === run("grep -vw in app.log").length) return null;
+    return {
+      title: "Without the word in",
+      description: "Show the lines of app.log that do NOT contain the word in on its own. (A line with Loading but no separate in should be shown.)",
+      files: ["app.log"],
+      solution: "grep -vw in app.log",
+      hints: ["Invert the match, and match whole words only.", "-v and -w combine as -vw.", "grep -vw in app.log"],
+    };
+  }),
+
+  // regex-repeat
+  t(["regex-repeat"], 1, (r, logs, run) => {
+    if (run("grep java error.log").length === run("grep -E 'java:[0-9]{3}' error.log").length) return null;
+    return {
+      title: "Three-digit line numbers",
+      description: "Show the stack-trace lines in error.log that point at line 100 or higher (a three-digit line number, like PaymentClient.java:123).",
+      files: ["error.log"],
+      solution: "grep -E 'java:[0-9]{3}' error.log",
+      hints: ["With -E, {3} means exactly three of the thing before it.", "[0-9]{3} is three digits; put java: in front.", "grep -E 'java:[0-9]{3}' error.log"],
+    };
+  }),
+  t(["regex-repeat", "regex-classes"], 2, (r, logs, run) => {
+    const slow = run("grep ms app.log").length;
+    if (!slow || slow === run("grep -E '[0-9]{4}ms' app.log").length) return null;
+    return {
+      title: "Really slow queries",
+      description: "Show the slow queries in app.log that took 1000ms or more: four digits before ms.",
+      files: ["app.log"],
+      solution: "grep -E '[0-9]{4}ms' app.log",
+      hints: ["Use -E and a repeat count.", "[0-9]{4} is four digits.", "grep -E '[0-9]{4}ms' app.log"],
+    };
+  }),
+  t(["regex-repeat", "regex-classes"], 3, (r, logs, run) => {
+    const slow = run("grep ms app.log").length;
+    if (!slow || slow === run("grep -E '[2-9][0-9]{3}ms' app.log").length) return null;
+    return {
+      title: "Two seconds or more",
+      description: "Show the slow queries in app.log that took 2000ms or more (but under 10000ms).",
+      files: ["app.log"],
+      solution: "grep -E '[2-9][0-9]{3}ms' app.log",
+      hints: ["The first digit is 2 to 9, then three more digits.", "[2-9] then [0-9]{3}, then ms.", "grep -E '[2-9][0-9]{3}ms' app.log"],
+    };
+  }),
+
+  // grep-o
+  t(["grep-o"], 1, () => ({
+    title: "Just the durations",
+    description: "Print just the duration of each slow query in app.log (like 2300ms), one per line.",
+    files: ["app.log"],
+    solution: "grep -oE '[0-9]+ms' app.log",
+    hints: ["-o prints only the part of the line that matched.", "[0-9]+ is one or more digits; follow it with ms.", "grep -oE '[0-9]+ms' app.log"],
+  })),
+  t(["grep-o"], 2, () => ({
+    title: "Source files",
+    description: "Print just the source file name (like PaymentClient.java) from each stack-trace line of error.log.",
+    files: ["error.log"],
+    solution: "grep -oE '[A-Za-z]+\\.java' error.log",
+    hints: ["-o prints only the matching part.", "[A-Za-z]+ is a word; \\. is a literal dot.", "grep -oE '[A-Za-z]+\\.java' error.log"],
+  })),
+  t(["grep-o", "top-n"], 3, (r, logs, run) => {
+    const report = "grep -oE '[A-Za-z]+\\.java' error.log | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Most troubled file",
+      description: "Which source file (like PaymentClient.java) shows up most often in error.log's stack traces? Show its count and name.",
+      files: ["error.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["Extract the file names with grep -o.", "Then sort | uniq -c | sort -rn | head -n 1.", `${report} | head -n 1`],
+    };
+  }),
 ];
 
 // Placement test: each question needs several skills at once. Passing one
@@ -709,6 +894,12 @@ const PLACEMENT = [
       solution: `${report} | head -n 1`,
     };
   }),
+  t(["grep-o", "regex-repeat", "regex-classes"], 3, () => ({
+    title: "Just the numbers",
+    description: "Print just the duration of each slow query in app.log (like 2300ms), one per line.",
+    files: ["app.log"],
+    solution: "grep -oE '[0-9]+ms' app.log",
+  })),
 ];
 
 // ---------- Building challenges ----------

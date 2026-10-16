@@ -23,7 +23,7 @@ const cases = [
   ["grep -vn 200 access.log", ["grep-basic", "grep-v", "grep-n"]],
   ["grep -E 'ERROR|WARN' app.log", ["grep-basic", "grep-or"]],
   ["grep 'ERROR\\|WARN' app.log", ["grep-basic", "grep-or"]],
-  ["grep -E 'ERR+' app.log", ["grep-basic"]],
+  ["grep -E 'ERR+' app.log", ["grep-basic", "regex-repeat"]],
   ["grep -A 2 -n x f", ["grep-basic", "grep-n"]],
   ["grep 404 access.log | wc -l", ["pipes", "grep-basic", "wc"]],
   ["head -5 app.log", ["head-tail"]],
@@ -36,6 +36,14 @@ const cases = [
   ["awk '{print $3}' app.log | uniq", ["pipes", "columns"]],
   ["x | sort | uniq -c | sort -rn | head -n 1", ["pipes", "sort-uniq", "uniq-count", "top-n", "head-tail"]],
   ["x | sort | uniq -c | sort -n | tail -n 1", ["pipes", "sort-uniq", "uniq-count", "top-n", "head-tail"]],
+  ["grep -oE '[0-9]+ms' app.log", ["grep-basic", "grep-o", "regex-classes", "regex-repeat"]],
+  ["grep '[0-9]*ms' app.log", ["grep-basic", "regex-classes", "regex-repeat"]],
+  ["grep -E 'java:[0-9]{3}' error.log", ["grep-basic", "regex-classes", "regex-repeat"]],
+  ["grep '^ ' error.log", ["grep-basic", "regex-anchors"]],
+  ["grep 'connection$' app.log", ["grep-basic", "regex-anchors"]],
+  ["grep '^[^ ]' error.log", ["grep-basic", "regex-anchors", "regex-classes"]],
+  ["grep -wc at error.log", ["grep-basic", "grep-w", "grep-count"]],
+  ["grep 10.0.0.5 access.log", ["grep-basic"]],
   ["grep 'unclosed", []],
 ];
 for (const [command, expected] of cases) {

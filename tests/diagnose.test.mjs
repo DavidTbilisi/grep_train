@@ -30,6 +30,9 @@ const cases = [
   ["too few, either pattern", ["a ERROR"], ["a ERROR", "b WARN"], "grep ERROR f", "grep -E 'ERROR|WARN' f", "too-few", "grep-or"],
   ["whole lines", ["10:01 1.2.3.4 GET", "10:02 5.6.7.8 GET"], ["1.2.3.4", "5.6.7.8"], "grep GET f", "awk '{print $2}' f", "whole-lines", "columns"],
   ["wrong column", ["GET", "POST"], ["1.2.3.4", "5.6.7.8"], "awk '{print $3}' f", "awk '{print $2}' f", "wrong-column", "columns"],
+  ["whole lines, -o", ["a took 300ms", "b took 4100ms"], ["300ms", "4100ms"], "grep -E '[0-9]+ms' f", "grep -oE '[0-9]+ms' f", "whole-lines", "grep-o"],
+  ["too many, -w", ["a logged in", "b Loading"], ["a logged in"], "grep in f", "grep -w in f", "too-many", "grep-w"],
+  ["too many, anchor", ["a connection", "b connection lost"], ["a connection"], "grep connection f", "grep 'connection$' f", "too-many", "regex-anchors"],
   ["other", ["q", "r", "s"], ["a", "b"], "x", "y", "mismatch", null],
 ];
 for (const [name, got, want, command, solution, kind, skill] of cases) {

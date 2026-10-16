@@ -24,10 +24,10 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 |---|---|---|
 | `js/shell.js` | `runCommandLine`, `TOOLS` | Pure (DOM-free) simulator: quote-aware parsing, pipes, globs, and the tools. Returns `{output}` or `{error}` |
 | `js/game-data.js` | `FILES`, `LEVELS`, `ASCII_ART` | Course log files and challenge definitions (`solution`, `hints`, `learn`, `files`, `skills`) |
-| `js/skills.js` | `SKILLS`, `SKILL_BY_ID`, `ancestors`, `detectSkills` | Pure. The 14 skills, their prerequisites (array order = teaching order), and which skills a command line uses |
+| `js/skills.js` | `SKILLS`, `SKILL_BY_ID`, `ancestors`, `detectSkills` | Pure. The 19 skills (core log tools, then the regex track), their prerequisites (array order = teaching order), and which skills a command line uses |
 | `js/learner.js` | `loadLearner`, `recordResult`, `outcomeScore`, `grantPlacement`, ... | Pure. Mastery per skill (EWMA, mastered at >= 0.75 after 3 results), spaced review (1/3/7/14/30 days), storage injected |
 | `js/scheduler.js` | `pickNext`, `chooseKind` | Pure. Next skill + difficulty: remediate > due review > learning > new > stretch; then the kind (predict when new, fix when remediating, a mix otherwise) |
-| `js/generator.js` | `generateChallenge`, `generatePlacement`, `TEMPLATES` | Pure. Seeded log generator and per-skill challenge templates (difficulty 1-3) |
+| `js/generator.js` | `generateChallenge`, `generatePlacement`, `TEMPLATES` | Pure. Seeded generator for app.log, access.log, and error.log (stack traces), and per-skill challenge templates (difficulty 1-3) |
 | `js/variants.js` | `generateVariant`, `MUTATIONS`, `makeFix`, `makePredict` | Pure. Realistic mistakes applied to a solution; turn a generated challenge into "fix" (broken command to repair) or "predict" (multiple choice; wrong choices are mutants' outputs). Falls back to "write" |
 | `js/diagnose.js` | `checkOutput`, `diagnose` | Pure. Answer comparison and wrong-answer diagnosis (kind, message, skill) |
 | `js/skill-map.js` | `renderSkillMap` | Skill map screen |

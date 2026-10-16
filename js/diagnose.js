@@ -87,8 +87,10 @@ function diagnose(got, want, command, solution) {
     return result("inverted", "You got exactly the opposite lines. -v flips a match, so add it or remove it.", "grep-v");
   }
   if (overlap === want.length && got.length > want.length) {
-    const extra = got.length - want.length;
-    return result("too-many", `You have all ${want.length} right line(s) plus ${extra} extra. Make your filter stricter.`);
+    const extra = `You have all ${want.length} right line(s) plus ${got.length - want.length} extra.`;
+    if (forgot("grep-w")) return result("too-many", `${extra} -w matches whole words only, not text inside longer words.`, "grep-w");
+    if (forgot("regex-anchors")) return result("too-many", `${extra} Anchor the pattern: ^ matches the start of a line, $ the end.`, "regex-anchors");
+    return result("too-many", `${extra} Make your filter stricter.`);
   }
   if (overlap === got.length && got.length < want.length) {
     const missing = want.length - got.length;
@@ -99,6 +101,7 @@ function diagnose(got, want, command, solution) {
 
   if (got.length === want.length) {
     if (got.every((line, i) => line !== want[i] && line.includes(want[i]))) {
+      if (forgot("grep-o")) return result("whole-lines", "Your lines contain the answer, plus extra text. -o prints only the part that matched.", "grep-o");
       return result("whole-lines", "Your lines contain the answer, plus extra text. Print only the column(s) you need.", "columns");
     }
     if (got.every((line, i) => !line.includes(" ") && !want[i].includes(" "))) {

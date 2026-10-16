@@ -91,6 +91,38 @@ const SKILLS = [
     requires: ["uniq-count"],
     learn: "sort -rn puts the biggest numbers first. Add head -n N to keep the top N.",
   },
+
+  // Regex track
+  {
+    id: "regex-anchors",
+    name: "Anchors (^ and $)",
+    requires: ["grep-basic"],
+    learn: "^ matches the start of a line and $ the end: grep '^ ' finds lines that start with a space.",
+  },
+  {
+    id: "regex-classes",
+    name: "Character classes ([0-9])",
+    requires: ["grep-basic"],
+    learn: "[abc] matches any one of a, b, or c; [0-9] any digit; [^0-9] anything except a digit.",
+  },
+  {
+    id: "grep-w",
+    name: "Whole words (grep -w)",
+    requires: ["grep-basic"],
+    learn: "-w matches whole words only: grep -w in skips the 'in' inside Loading or finished.",
+  },
+  {
+    id: "regex-repeat",
+    name: "Repetition (+ and {n})",
+    requires: ["regex-classes", "grep-or"],
+    learn: "With -E, + means one or more of the thing before it, {3} exactly three, and .* anything at all.",
+  },
+  {
+    id: "grep-o",
+    name: "Extract matches (grep -o)",
+    requires: ["regex-repeat"],
+    learn: "-o prints only the part of each line that matched, one match per line.",
+  },
 ];
 
 const SKILL_BY_ID = Object.fromEntries(SKILLS.map((skill) => [skill.id, skill]));
@@ -159,8 +191,14 @@ function detectSkills(command) {
         if (flags.has("v")) found.add("grep-v");
         if (flags.has("c")) found.add("grep-count");
         if (flags.has("n")) found.add("grep-n");
+        if (flags.has("w")) found.add("grep-w");
+        if (flags.has("o")) found.add("grep-o");
         const pattern = operands[0] || "";
         if ((flags.has("E") && pattern.includes("|")) || pattern.includes("\\|")) found.add("grep-or");
+        if (/^\^|\$$|\|\^|\$\|/.test(pattern)) found.add("regex-anchors");
+        if (/\[[^\]]+\]/.test(pattern)) found.add("regex-classes");
+        // Quantifiers: + ? {n} in extended regex, \+ \? \{n\} in basic; * in both.
+        if (flags.has("E") ? /[+*?]|\{\d/.test(pattern) : /\*|\\[+?{]/.test(pattern)) found.add("regex-repeat");
         break;
       }
       case "head":

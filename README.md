@@ -13,7 +13,7 @@ From the menu, pick a mode:
 
 - **practice**: endless generated challenges, chosen for you (see below)
 - **course**: the 16 hand-written challenges, in order
-- **placement-test**: 6 questions without hints; each one you pass marks its skills as known so practice skips ahead
+- **placement-test**: 7 questions without hints; each one you pass marks its skills as known so practice skips ahead
 - **skills**: your skill map, with mastery, review dates, your most common mistakes, and a button to practise any skill
 
 Then:
@@ -27,14 +27,14 @@ Your progress is saved in the browser.
 
 ## 🧠 How Practice Adapts
 
-- **14 skills** (grep basics, -i, -v, -c, -n, -E, head/tail, wc, pipes, columns, sort | uniq, uniq -c, awk filters, top-N reports), each with prerequisites.
+- **19 skills**, each with prerequisites: grep basics, -i, -v, -c, -n, -E, head/tail, wc, pipes, columns, sort | uniq, uniq -c, awk filters, top-N reports, and a regex track (`^`/`$` anchors, `[0-9]` classes, `-w` whole words, `+`/`{n}` repetition, `-o` extraction).
 - **Mastery** per skill goes from 0 to 100%. Every result moves it towards how well you did: a clean first-try solve counts most, wrong runs and hints count less, revealing the solution or giving up after trying counts as a miss. Three clean solves in a row master a skill.
 - **Credit for what you actually used.** Solve "count the errors" with `grep | wc -l` instead of `grep -c`, and pipes and wc get the credit, not `-c`, so `-c` comes back.
 - **Wrong answers are diagnosed**: wrong order, `uniq` without `sort`, lines instead of a count, missing `-i`, inverted `-v`, wrong column, and more. Each one names the fix.
 - **Picking the next challenge**: two misses in a row step back to the weakest prerequisite (or an easier version); otherwise reviews that are due come first, then the skill you're learning, then the next new skill whose prerequisites are in place. Difficulty (1-3) rises with mastery.
 - **Spaced review**: mastered skills come back after 1, 3, 7, 14, and 30 days.
 - **Three kinds of challenge**: *predict* (read a command and pick what it prints; wrong choices are what common mistakes print), *fix* (a nearly-right command with a realistic bug, already in the prompt), and *write* (from scratch). New skills start with predict, struggling turns into fix, fix challenges target your most common mistakes, and familiar skills get a mix. Predicting alone can't master a skill: that takes writing.
-- **Fresh logs every time**: practice challenges are generated from a seed, with new `app.log` / `access.log` content, so you can't just memorize answers.
+- **Fresh logs every time**: practice challenges are generated from a seed, with new `app.log`, `access.log`, and `error.log` (errors with Java-style stack traces) content, so you can't just memorize answers.
 
 **Keys:** `Enter` run · `Tab` autocomplete · `↑`/`↓` command history · `h` hint · `Esc` menu
 

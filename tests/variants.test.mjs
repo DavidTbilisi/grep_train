@@ -23,6 +23,14 @@ test("mutations make the intended mistakes", () => {
   assert.deepEqual(apply("quoting", "grep 'POST /login' f"), ["grep POST /login f"]);
   assert.deepEqual(apply("quoting", "grep -E 'A|B' f"), []);
   assert.deepEqual(apply("wc-per-file", "cat a b | wc -l"), ["wc -l a b"]);
+  assert.deepEqual(apply("empty", "grep -oE '[0-9]+ms' f"), ["grep -o '[0-9]+ms' f"]);
+  assert.deepEqual(apply("too-few", "grep -E 'java:[0-9]{3}' f"), ["grep -E 'java:[0-9]{4}' f"]);
+  assert.deepEqual(apply("whole-lines", "grep -oE '[0-9]+ms' f"), ["grep -E '[0-9]+ms' f"]);
+  assert.deepEqual(apply("too-many", "grep -c '^ ' f"), ["grep -c ' ' f"]);
+  assert.deepEqual(apply("too-many", "grep 'lost$' f"), ["grep 'lost' f"]);
+  assert.deepEqual(apply("too-many", "grep -wc at f"), ["grep -c at f"]);
+  assert.deepEqual(apply("class", "grep 'User [a-c]' f"), ["grep 'User [^a-c]' f"]);
+  assert.deepEqual(apply("class", "grep '^[^ ]' f"), ["grep '^[^ ]' f"].slice(1)); // already negated
   for (const m of MUTATIONS) assert.ok(SKILL_BY_ID[m.skill], m.kind);
 });
 

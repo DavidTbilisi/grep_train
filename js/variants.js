@@ -109,8 +109,50 @@ const MUTATIONS = [
   {
     kind: "empty",
     skill: "grep-or",
-    apply: dropFlag("E"),
+    apply: (cmd) => (/'[^']*\|[^']*'/.test(cmd) ? dropFlag("E")(cmd) : null),
     explain: "Without -E, | is an ordinary character, so grep looks for a literal | in each line.",
+  },
+  {
+    kind: "empty",
+    skill: "regex-repeat",
+    apply: (cmd) => (/'[^']*[+{][^']*'/.test(cmd) ? dropFlag("E")(cmd) : null),
+    explain: "Without -E, + and {n} are ordinary characters, so grep looks for them literally.",
+  },
+  {
+    kind: "too-few",
+    skill: "regex-repeat",
+    apply: replace(/\{(\d)\}/, (m, n) => `{${Number(n) + 1}}`),
+    explain: "{n} means exactly n of the thing before it, so the count matters.",
+  },
+  {
+    kind: "whole-lines",
+    skill: "grep-o",
+    apply: dropFlag("o"),
+    explain: "Without -o, grep prints the whole matching line, not just the part that matched.",
+  },
+  {
+    kind: "too-many",
+    skill: "grep-w",
+    apply: dropFlag("w"),
+    explain: "Without -w, the pattern also matches inside longer words.",
+  },
+  {
+    kind: "too-many",
+    skill: "regex-anchors",
+    apply: replace(/'\^/, "'"),
+    explain: "Without ^, the pattern can match anywhere in the line, not just at the start.",
+  },
+  {
+    kind: "too-many",
+    skill: "regex-anchors",
+    apply: replace(/\$'/, "'"),
+    explain: "Without $, the pattern can match anywhere in the line, not just at the end.",
+  },
+  {
+    kind: "class",
+    skill: "regex-classes",
+    apply: replace(/\[(?!\^)([^\]]+)\]/, "[^$1]"),
+    explain: "[^...] means any character EXCEPT the ones listed, the opposite of [...].",
   },
   {
     kind: "lines-not-count",

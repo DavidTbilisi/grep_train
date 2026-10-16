@@ -151,6 +151,15 @@
                             <div class="option"><code>-A/-B/-C N</code> <span>N lines of context after / before / around</span></div>
                         </div>
 
+                        <h3>Regular expressions</h3>
+                        <div class="options-list">
+                            <div class="option"><code>^ $</code> <span>start / end of the line: <code>'^ '</code>, <code>'lost$'</code></span></div>
+                            <div class="option"><code>[0-9] [a-c] [^ ]</code> <span>one character from a set (<code>^</code> inside means "not")</span></div>
+                            <div class="option"><code>-w</code> <span>whole words only: <code>grep -w in</code> skips Loading</span></div>
+                            <div class="option"><code>+ {3} .*</code> <span>with <code>-E</code>: one or more, exactly three, anything</span></div>
+                            <div class="option"><code>-o</code> <span>print only the matched part: <code>grep -oE '[0-9]+ms'</code></span></div>
+                        </div>
+
                         <h3>Log analysis tools</h3>
                         <div class="options-list">
                             <div class="option"><code>cat FILE</code> <span>print a whole file</span></div>
