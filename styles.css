@@ -784,6 +784,146 @@ body::before {
   font-size: 16px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+.menu-options .terminal-button {
+  min-width: 380px;
+}
+
+.menu-hint {
+  margin-left: auto;
+  padding-left: 16px;
+  color: #888888;
+  font-size: 12px;
+}
+
+/* Success modal: skill changes */
+.success-skills {
+  list-style: none;
+  margin: 10px 0;
+  text-align: left;
+  font-size: 13px;
+  color: #74c0fc;
+}
+
+.success-skills li {
+  margin: 4px 0;
+}
+
+.success-stats p.success-note {
+  font-size: 13px;
+  color: #ffd93d;
+}
+
+.success-note:empty {
+  display: none;
+}
+
+/* Skill Map */
+.skills-intro {
+  font-size: 13px;
+}
+
+.skills-summary {
+  color: var(--secondary-color);
+}
+
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 15px 0 25px;
+}
+
+.skill-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 160px 48px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.skill-row.locked {
+  opacity: 0.55;
+}
+
+.skill-row.due {
+  border-color: #ffd93d;
+}
+
+.skill-icon {
+  text-align: center;
+}
+
+.skill-row.mastered .skill-icon {
+  color: #6bcf7f;
+}
+
+.skill-row.due .skill-icon {
+  color: #ffd93d;
+}
+
+.skill-name {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.skill-status {
+  color: #999999;
+  font-size: 12px;
+}
+
+.skill-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.skill-fill {
+  height: 100%;
+  background: var(--primary-color);
+}
+
+.skill-pct {
+  text-align: right;
+  font-size: 12px;
+  color: #cccccc;
+}
+
+.terminal-button.skill-practice {
+  min-width: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.skills-mistakes {
+  margin: 10px 0 25px 20px;
+  color: #cccccc;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .menu-options .terminal-button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .skill-row {
+    grid-template-columns: 24px 1fr auto;
+  }
+
+  .skill-bar,
+  .skill-pct {
+    display: none;
+  }
+}
+
 /* Loading Overlay */
 .loading-overlay {
   position: fixed;

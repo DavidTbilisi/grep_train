@@ -531,6 +531,20 @@ function ls(args, ctx) {
 // ---------- Public API ----------
 
 /**
+ * Split a command line into pipeline stages of plain words, without running it.
+ * Used to see which tools and flags a learner used.
+ * @returns {string[][] | null}  null if the line doesn't parse
+ */
+function splitPipeline(line) {
+  try {
+    return parseCommandLine(line.trim()).map((words) => words.map((w) => w.text));
+  } catch (e) {
+    if (e instanceof ShellError) return null;
+    throw e;
+  }
+}
+
+/**
  * Run a command line such as `grep ERROR app.log | wc -l`.
  * @param {string} line
  * @param {Record<string, string>} files  virtual file system: name -> content
@@ -555,4 +569,4 @@ function runCommandLine(line, files) {
   }
 }
 
-export { runCommandLine, TOOLS };
+export { runCommandLine, splitPipeline, TOOLS };

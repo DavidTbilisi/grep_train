@@ -2,7 +2,8 @@
 //
 // Each challenge only needs a `solution`: the expected output is computed by
 // running that solution through the shell simulator, so any command that
-// prints the same output is accepted.
+// prints the same output is accepted. `skills` (ids from skills.js) say what
+// the challenge practises, so results feed the learner model.
 
 const FILES = {
   "app.log": `2024-01-15 10:30:00 INFO Server starting on port 8080
@@ -49,6 +50,7 @@ const LEVELS = [
         learn: "grep PATTERN FILE prints only the lines of FILE that contain PATTERN.",
         files: ["app.log"],
         solution: "grep ERROR app.log",
+        skills: ["grep-basic"],
         hints: ["Start with the word grep.", "Then the word to search for, then the file name.", "grep ERROR app.log"],
       },
       {
@@ -57,6 +59,7 @@ const LEVELS = [
         learn: "grep is case-sensitive. The -i option makes it ignore case.",
         files: ["app.log"],
         solution: "grep -i timeout app.log",
+        skills: ["grep-i"],
         hints: ["Options go right after the command name.", "-i means ignore case.", "grep -i timeout app.log"],
       },
       {
@@ -65,6 +68,7 @@ const LEVELS = [
         learn: "The -v option inverts the match, so grep prints lines that do NOT contain the pattern.",
         files: ["app.log"],
         solution: "grep -v DEBUG app.log",
+        skills: ["grep-v"],
         hints: ["You want the opposite of a normal search.", "-v inverts the match.", "grep -v DEBUG app.log"],
       },
     ],
@@ -78,6 +82,7 @@ const LEVELS = [
         learn: "The -c option prints a count of matching lines instead of the lines themselves.",
         files: ["app.log"],
         solution: "grep -c ERROR app.log",
+        skills: ["grep-count"],
         hints: ["There is an option for counting.", "-c means count.", "grep -c ERROR app.log"],
       },
       {
@@ -86,6 +91,7 @@ const LEVELS = [
         learn: "The -n option puts the line number in front of each match, like 4:...",
         files: ["app.log"],
         solution: "grep -n WARN app.log",
+        skills: ["grep-n"],
         hints: ["There is an option for line numbers.", "-n means number.", "grep -n WARN app.log"],
       },
       {
@@ -94,6 +100,7 @@ const LEVELS = [
         learn: "With -E (extended regex), A|B matches A or B. Quote the pattern so the shell leaves the | alone.",
         files: ["app.log"],
         solution: "grep -E 'ERROR|WARN' app.log",
+        skills: ["grep-or"],
         hints: ["Use extended regex with -E.", "| means OR inside the pattern. Put the pattern in quotes.", "grep -E 'ERROR|WARN' app.log"],
       },
     ],
@@ -107,6 +114,7 @@ const LEVELS = [
         learn: "head -n N FILE prints the first N lines of a file.",
         files: ["access.log", "app.log"],
         solution: "head -n 3 access.log",
+        skills: ["head-tail"],
         hints: ["Use the head tool.", "-n sets how many lines.", "head -n 3 access.log"],
       },
       {
@@ -115,6 +123,7 @@ const LEVELS = [
         learn: "tail -n N FILE prints the last N lines. On real servers, tail -f follows a log as it grows.",
         files: ["app.log", "access.log"],
         solution: "tail -n 2 app.log",
+        skills: ["head-tail"],
         hints: ["head shows the top. Which tool shows the bottom?", "tail -n N shows the last N lines.", "tail -n 2 app.log"],
       },
       {
@@ -123,6 +132,7 @@ const LEVELS = [
         learn: "wc counts things. wc -l counts lines.",
         files: ["access.log", "app.log"],
         solution: "wc -l access.log",
+        skills: ["wc"],
         hints: ["wc stands for word count, but it can count lines too.", "-l means lines.", "wc -l access.log"],
       },
     ],
@@ -136,6 +146,7 @@ const LEVELS = [
         learn: "A pipe | sends the output of one command into the next: cmd1 | cmd2.",
         files: ["access.log"],
         solution: "grep 404 access.log | wc -l",
+        skills: ["pipes", "wc"],
         hints: ["First, grep the 404 lines.", "Then pipe them into wc -l to count them.", "grep 404 access.log | wc -l"],
       },
       {
@@ -144,6 +155,7 @@ const LEVELS = [
         learn: "You can pipe into head or tail to keep only the first or last few results.",
         files: ["app.log"],
         solution: "grep ERROR app.log | tail -n 1",
+        skills: ["pipes", "head-tail"],
         hints: ["Find all the ERROR lines first.", "Pipe them into tail to keep only the last one.", "grep ERROR app.log | tail -n 1"],
       },
       {
@@ -152,6 +164,7 @@ const LEVELS = [
         learn: "awk '{print $2}' prints the 2nd whitespace-separated column. cut -d' ' -f2 does the same.",
         files: ["access.log"],
         solution: "awk '{print $2}' access.log",
+        skills: ["columns"],
         hints: ["awk splits each line into columns: $1, $2, $3 ...", "Use single quotes around the awk program.", "awk '{print $2}' access.log"],
       },
     ],
@@ -165,6 +178,7 @@ const LEVELS = [
         learn: "sort puts lines in order. uniq removes repeated neighbouring lines, so always sort first.",
         files: ["access.log"],
         solution: "awk '{print $2}' access.log | sort | uniq",
+        skills: ["sort-uniq"],
         hints: ["Start by printing the IP column.", "Pipe into sort, then into uniq.", "awk '{print $2}' access.log | sort | uniq"],
       },
       {
@@ -173,6 +187,7 @@ const LEVELS = [
         learn: "uniq -c puts a count in front of each unique line. That is a quick histogram.",
         files: ["access.log"],
         solution: "awk '{print $5}' access.log | sort | uniq -c",
+        skills: ["uniq-count"],
         hints: ["Print column 5 with awk.", "sort, then uniq -c.", "awk '{print $5}' access.log | sort | uniq -c"],
       },
       {
@@ -181,6 +196,7 @@ const LEVELS = [
         learn: "awk can filter too: awk '$5 == 404 {print $4}' only prints lines where column 5 is 404.",
         files: ["access.log"],
         solution: "awk '$5 == 404 {print $4}' access.log",
+        skills: ["awk-filter", "columns"],
         hints: ["Put a condition before the { print } part.", "Compare a column with ==, like $5 == 404.", "awk '$5 == 404 {print $4}' access.log"],
       },
       {
@@ -189,6 +205,7 @@ const LEVELS = [
         learn: "sort -rn sorts numbers from biggest to smallest. Add head -n 1 to keep the top one.",
         files: ["access.log"],
         solution: "awk '{print $2}' access.log | sort | uniq -c | sort -rn | head -n 1",
+        skills: ["top-n"],
         hints: [
           "Start from the uniq -c report, but use the IP column.",
           "Sort the counts with sort -rn (reverse numeric).",

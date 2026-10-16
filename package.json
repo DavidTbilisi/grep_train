@@ -9,7 +9,7 @@
     "build": "echo 'No build process needed for vanilla HTML/CSS/JS'",
     "deploy": "gh-pages -d .",
     "lint": "eslint js/*.js",
-    "test": "node tests/shell.test.mjs"
+    "test": "node --test \"tests/*.test.mjs\""
   },
   "repository": {
     "type": "git",
@@ -37,6 +37,6 @@
     "gh-pages": "^4.0.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=21.0.0"
   }
 }

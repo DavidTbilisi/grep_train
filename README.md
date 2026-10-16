@@ -5,15 +5,35 @@
 **Learn `grep` and the everyday log analysis toolbox by typing real commands against real-looking logs.**
 
 No timers, no lives, no game over. Read the task, type a command, and see what happens.
+Practice mode adapts to you: it tracks what you've mastered and picks what you need next.
 
 ## 🎮 How to Play
+
+From the menu, pick a mode:
+
+- **practice**: endless generated challenges, chosen for you (see below)
+- **course**: the 16 hand-written challenges, in order
+- **placement-test**: 6 questions without hints; each one you pass marks its skills as known so practice skips ahead
+- **skills**: your skill map, with mastery, review dates, your most common mistakes, and a button to practise any skill
+
+Then:
 
 1. Read the challenge and the one-line **Learn** tip.
 2. Look at the log files on the left (`app.log`, `access.log`).
 3. Type a command and press Enter. Any command that prints the right output wins.
 4. Stuck? Open **Show expected output**, take a 💡 hint (−25 points), or reveal the solution (0 points).
 
-Your progress is saved in the browser, so **continue** picks up where you left off.
+Your progress is saved in the browser.
+
+## 🧠 How Practice Adapts
+
+- **14 skills** (grep basics, -i, -v, -c, -n, -E, head/tail, wc, pipes, columns, sort | uniq, uniq -c, awk filters, top-N reports), each with prerequisites.
+- **Mastery** per skill goes from 0 to 100%. Every result moves it towards how well you did: a clean first-try solve counts most, wrong runs and hints count less, revealing the solution or giving up after trying counts as a miss. Three clean solves in a row master a skill.
+- **Credit for what you actually used.** Solve "count the errors" with `grep | wc -l` instead of `grep -c`, and pipes and wc get the credit, not `-c`, so `-c` comes back.
+- **Wrong answers are diagnosed**: wrong order, `uniq` without `sort`, lines instead of a count, missing `-i`, inverted `-v`, wrong column, and more. Each one names the fix.
+- **Picking the next challenge**: two misses in a row step back to the weakest prerequisite (or an easier version); otherwise reviews that are due come first, then the skill you're learning, then the next new skill whose prerequisites are in place. Difficulty (1-3) rises with mastery.
+- **Spaced review**: mastered skills come back after 1, 3, 7, 14, and 30 days.
+- **Fresh logs every time**: practice challenges are generated from a seed, with new `app.log` / `access.log` content, so you can't just memorize answers.
 
 **Keys:** `Enter` run · `Tab` autocomplete · `↑`/`↓` command history · `h` hint · `Esc` menu
 
@@ -45,7 +65,7 @@ Commands can be chained with pipes (`|`), and arguments can use `'single'` and `
 
 ```bash
 npm run start   # http://localhost:8000
-npm test        # compares the shell simulator against real bash + GNU tools
+npm test        # unit tests + the shell simulator and generated challenges vs real bash (Node 21+)
 npm run deploy  # publish to GitHub Pages
 ```
 
@@ -58,20 +78,26 @@ index.html              # Screens: menu, game, cheat sheet, settings
 styles.css
 js/
 ├── main.js             # Entry point, wires data-action buttons and keyboard shortcuts
-├── game-engine.js      # Challenge flow, scoring, saved progress
-├── game-data.js        # Log files, levels, challenges (solution + hints)
+├── game-engine.js      # Course / practice / placement flow, scoring
+├── game-data.js        # Course log files, levels, challenges (solution + hints + skills)
 ├── shell.js            # Pure simulator for grep/cat/head/tail/wc/sort/uniq/cut/awk with pipes
+├── skills.js           # Skill graph + which skills a command uses
+├── learner.js          # Mastery model, spaced review, saved progress
+├── scheduler.js        # Picks the next skill and difficulty
+├── generator.js        # Seeded log generator + challenge templates per skill
+├── diagnose.js         # Answer checking and wrong-answer diagnosis
+├── skill-map.js        # Skill map screen
 ├── command-autocomplete.js
 ├── settings.js         # Sound + theme
 ├── terminal-effects.js # Matrix rain, typing, scanline
 ├── animations.js, audio.js, ui.js
-tests/shell.test.mjs    # Simulator vs real bash
+tests/                  # node --test: simulator and generator vs real bash, learner, scheduler, diagnosis
 grep_practice/          # Standalone files for practicing in a real shell
 ```
 
 ## 🛠️ Adding a Challenge
 
-Add an entry to a level in `js/game-data.js`. You don't write the expected output by hand: it's computed by running `solution` through the simulator.
+Add an entry to a level in `js/game-data.js`. You don't write the expected output by hand: it's computed by running `solution` through the simulator. `skills` lists the skill ids from `js/skills.js` it practises.
 
 ```javascript
 {
@@ -80,11 +106,14 @@ Add an entry to a level in `js/game-data.js`. You don't write the expected outpu
   learn: "awk can compare columns numerically: $5 >= 500.",
   files: ["access.log"],
   solution: "awk '$5 >= 500' access.log",
+  skills: ["awk-filter"],
   hints: ["Filter on column 5.", "Use >= 500.", "awk '$5 >= 500' access.log"],
 },
 ```
 
 Then run `npm test` to check that the simulator agrees with real bash.
+
+For practice mode, add a template to `TEMPLATES` in `js/generator.js` instead: a function that writes the task, hints, and solution against freshly generated logs. The tests check every template over many seeds, including against real bash.
 
 ## 📄 License
 

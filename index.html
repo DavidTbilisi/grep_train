@@ -24,10 +24,10 @@
             </div>
             <div class="terminal-title">
                 <span class="terminal-icon">$</span>
-                Grep Master v2.0.0
+                Grep Master v3.0.0
             </div>
             <div class="terminal-stats">
-                <span class="level">Level: <span id="current-level">1</span></span>
+                <span class="level"><span id="stat-label">Level</span>: <span id="current-level">1</span></span>
                 <span class="score">Score: <span id="current-score">0</span></span>
             </div>
         </div>
@@ -45,8 +45,20 @@
                     <p class="typing-text"
                         data-text="No timers, no lives. Read the task, type a command, see what happens."></p>
                     <div class="menu-options">
-                        <button class="terminal-button" data-action="start">
-                            <span class="prompt">$</span> <span id="start-label">start-game</span>
+                        <button class="terminal-button" data-action="practice">
+                            <span class="prompt">$</span> practice
+                            <span class="menu-hint">picks what you need next</span>
+                        </button>
+                        <button class="terminal-button" data-action="course">
+                            <span class="prompt">$</span> <span id="course-label">course</span>
+                            <span class="menu-hint">16 challenges in order</span>
+                        </button>
+                        <button class="terminal-button" data-action="placement">
+                            <span class="prompt">$</span> <span id="placement-label">placement-test</span>
+                            <span class="menu-hint">skip what you know</span>
+                        </button>
+                        <button class="terminal-button" data-action="skills">
+                            <span class="prompt">$</span> skills
                         </button>
                         <button class="terminal-button" data-action="tutorial">
                             <span class="prompt">$</span> cheat-sheet
@@ -73,7 +85,7 @@
                             <pre id="expected-output"></pre>
                         </details>
                         <div class="challenge-stats">
-                            <span class="progress">Challenge <span id="challenge-progress">1/1</span></span>
+                            <span class="progress" id="challenge-progress"></span>
                             <span class="points">Worth: <span id="challenge-points">100 pts</span></span>
                         </div>
                     </div>
@@ -112,8 +124,8 @@
                 <!-- Challenge Controls -->
                 <div class="challenge-controls">
                     <button id="btn-prev" class="terminal-button secondary" data-action="prev">← Previous</button>
-                    <button class="terminal-button secondary" data-action="hint">💡 Hint</button>
-                    <button class="terminal-button secondary" data-action="solution">Show Solution</button>
+                    <button id="btn-hint" class="terminal-button secondary" data-action="hint">💡 Hint</button>
+                    <button id="btn-solution" class="terminal-button secondary" data-action="solution">Show Solution</button>
                     <button id="btn-next" class="terminal-button secondary" data-action="next">Skip →</button>
                     <button class="terminal-button secondary" data-action="menu">Menu</button>
                 </div>
@@ -160,6 +172,19 @@
                 </div>
             </div>
 
+            <!-- Skill Map Screen -->
+            <div id="skills-screen" class="screen">
+                <div class="tutorial-content">
+                    <h2>Skill Map</h2>
+                    <p class="skills-intro">Practice watches how you solve each challenge: first try, hints, the
+                        mistakes you make, and which tools your command actually used. It keeps you on a skill
+                        until you've solved it cleanly three times, steps back to the basics when you're stuck,
+                        and brings mastered skills back for review after 1, 3, 7, 14, and 30 days.</p>
+                    <div id="skills-content"></div>
+                    <button class="terminal-button" data-action="menu">Back to Menu</button>
+                </div>
+            </div>
+
             <!-- Settings Screen -->
             <div id="settings-screen" class="screen">
                 <div class="settings-content">
@@ -190,7 +215,7 @@
                             <div class="setting-control">
                                 <button class="terminal-button secondary" data-action="reset-progress">Reset
                                     progress</button>
-                                <span class="setting-description">Start again from challenge 1</span>
+                                <span class="setting-description">Forget course progress, skills, and points</span>
                             </div>
                         </div>
                     </div>
@@ -207,8 +232,12 @@
                     <h2 id="success-title">🎉 Challenge complete!</h2>
                     <div class="success-stats">
                         <p id="success-points"></p>
-                        <p>One way to solve it:</p>
-                        <pre id="success-solution" class="success-solution"></pre>
+                        <ul id="success-skills" class="success-skills"></ul>
+                        <p id="success-note" class="success-note"></p>
+                        <div id="success-solution-block">
+                            <p>One way to solve it:</p>
+                            <pre id="success-solution" class="success-solution"></pre>
+                        </div>
                     </div>
                     <button class="terminal-button" data-action="continue">Continue</button>
                 </div>

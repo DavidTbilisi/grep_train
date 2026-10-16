@@ -18,8 +18,7 @@ function goTo(screenId, afterShow) {
 }
 
 function backToMenu() {
-  game.gameStarted = false;
-  game.updateMenu();
+  game.stop();
   goTo("welcome-screen");
 }
 
@@ -40,7 +39,11 @@ function executeCommand() {
 
 // Every button declares what it does with data-action="...".
 const ACTIONS = {
-  start: () => showTransition(() => game.startGame()),
+  practice: () => showTransition(() => game.startPractice()),
+  course: () => showTransition(() => game.startCourse()),
+  placement: () => showTransition(() => game.startPlacement()),
+  skills: () => goTo("skills-screen", () => game.renderSkills()),
+  "practice-skill": (button) => showTransition(() => game.startPractice(button.dataset.skill)),
   tutorial: () => goTo("tutorial-screen", animateTutorialContent),
   settings: () => goTo("settings-screen", () => {
     updateSettingsUI();
@@ -50,13 +53,13 @@ const ACTIONS = {
   execute: executeCommand,
   hint: () => game.getHint(),
   solution: () => game.showSolution(),
-  prev: () => game.previousChallenge(),
-  next: () => game.nextChallenge(),
+  prev: () => game.previous(),
+  next: () => game.skip(),
   continue: () => {
     if (isSuccessModalOpen()) game.continueAfterSuccess();
   },
   "reset-progress": () => {
-    if (confirm("Reset all progress and start again from challenge 1?")) {
+    if (confirm("Reset all progress: course, skills, and practice?")) {
       game.resetProgress();
     }
   },
@@ -80,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const button = e.target.closest("[data-action]");
     if (!button) return;
     if (button.dataset.action !== "execute") playClickSound();
-    ACTIONS[button.dataset.action]();
+    ACTIONS[button.dataset.action](button);
   });
 
   document.getElementById("sound-toggle").addEventListener("change", (e) => setSound(e.target.checked));

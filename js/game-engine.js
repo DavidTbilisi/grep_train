@@ -1,13 +1,36 @@
-// Game Engine - challenge flow, scoring, and saved progress.
+// Game Engine - runs challenges and feeds every result into the learner model.
+//
+// Three modes:
+//   course     the 16 hand-written challenges in game-data.js, in order
+//   practice   generated challenges; the scheduler picks the skill and difficulty
+//   placement  a short test; each pass grants the skills used, so experienced
+//              players skip what they already know
 
 import { FILES, LEVELS, ASCII_ART } from "./game-data.js";
 import { runCommandLine } from "./shell.js";
+import { SKILLS, SKILL_BY_ID, detectSkills } from "./skills.js";
+import {
+  newLearner,
+  loadLearner,
+  saveLearner,
+  skillState,
+  outcomeScore,
+  recordResult,
+  recordMistake,
+  grantPlacement,
+  masteredCount,
+  dueCount,
+} from "./learner.js";
+import { pickNext } from "./scheduler.js";
+import { generateChallenge, generatePlacement, PLACEMENT_STEPS } from "./generator.js";
+import { checkOutput } from "./diagnose.js";
+import { renderSkillMap } from "./skill-map.js";
 import { playSuccessSound } from "./audio.js";
 import { showScreen } from "./ui.js";
 
 const POINTS = 100;
 const HINT_COST = 25;
-const PROGRESS_KEY = "grepMasterProgress";
+const STRUGGLE_RUNS = 3; // wrong runs before the expected output opens by itself
 
 // One flat list, each challenge knowing its level and expected output.
 const CHALLENGES = LEVELS.flatMap((level, levelIndex) =>
@@ -37,44 +60,63 @@ const HELP = [
   "  ls / clear / help",
 ];
 
-// Compare outputs loosely: ignore extra spaces, and treat "14 access.log"
-// (from wc -l FILE) the same as "14" (from cat FILE | wc -l).
-function normalize(lines, fileNames) {
-  return lines.map((line) => {
-    const clean = line.trim().replace(/\s+/g, " ");
-    const m = clean.match(/^(\d+) (\S+)$/);
-    return m && fileNames.includes(m[2]) ? m[1] : clean;
-  });
+// Why the scheduler picked this practice challenge, shown above its title.
+const REASONS = {
+  new: (skill) => `New skill: ${skill.name}`,
+  learn: (skill) => `Practice: ${skill.name}`,
+  review: (skill) => `Review: ${skill.name} (mastered earlier, keeping it fresh)`,
+  remediate: (skill, from) =>
+    from ? `Back to basics: ${skill.name} (it helps with ${from.name})` : `An easier one: ${skill.name}`,
+  stretch: (skill) => `Stretch: everything is mastered, so a harder ${skill.name}`,
+  focus: (skill) => `Focus: ${skill.name}`,
+};
+
+// Looking around (cat FILE, ls) isn't a wrong answer.
+const isExploring = (command) => /^(cat|ls)\b[^|]*$/.test(command);
+const percent = (mastery) => `${Math.round(mastery * 100)}%`;
+const randomSeed = () => Math.floor(Math.random() * 2 ** 32);
+
+function browserStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null; // blocked storage: progress lasts for this session only
+  }
 }
 
 class GrepGameEngine {
   constructor() {
-    this.index = 0;
-    this.solved = {}; // challenge index -> points earned
-    this.hintsUsed = 0;
-    this.solutionShown = false;
+    this.storage = browserStorage();
+    this.learner = loadLearner(this.storage, CHALLENGES.map((c) => c.skills));
+    this.mode = "course"; // "course" | "practice" | "placement"
+    this.challenge = null;
+    this.attempt = null; // { hintsUsed, wrong, solutionShown, solved, recorded }
+    this.pick = null; // the scheduler's choice behind the current practice challenge
+    this.focus = null; // a skill the player chose on the skill map
+    this.recent = []; // skills of the latest practice challenges
+    this.placement = null; // { step, granted, finished }
     this.gameStarted = false;
     this.history = [];
     this.historyPos = 0;
-    this.loadProgress();
   }
 
-  get challenge() {
-    return CHALLENGES[this.index];
+  get courseIndex() {
+    return Math.max(0, Math.min(this.learner.course.index || 0, CHALLENGES.length - 1));
   }
 
   // Files of the current challenge (used by Tab autocomplete).
   get currentFiles() {
-    return this.challenge.files;
+    return this.challenge ? this.challenge.files : FILES;
   }
 
   get score() {
-    return Object.values(this.solved).reduce((sum, points) => sum + points, 0);
+    const course = Object.values(this.learner.course.solved).reduce((sum, points) => sum + points, 0);
+    return course + this.learner.practice.points;
   }
 
   get pointsAvailable() {
-    if (this.solutionShown) return 0;
-    return Math.max(HINT_COST, POINTS - this.hintsUsed * HINT_COST);
+    if (this.attempt.solutionShown) return 0;
+    return Math.max(HINT_COST, POINTS - this.attempt.hintsUsed * HINT_COST);
   }
 
   init() {
@@ -91,66 +133,173 @@ class GrepGameEngine {
 
   // ---------- Progress ----------
 
-  loadProgress() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(PROGRESS_KEY));
-      if (saved) {
-        this.index = Math.min(saved.index || 0, CHALLENGES.length - 1);
-        this.solved = saved.solved || {};
-      }
-    } catch {
-      // Corrupt or unavailable storage: start fresh.
-    }
-  }
-
-  saveProgress() {
-    try {
-      localStorage.setItem(PROGRESS_KEY, JSON.stringify({ index: this.index, solved: this.solved }));
-    } catch {
-      // Storage unavailable (private mode): progress just won't persist.
-    }
+  save() {
+    saveLearner(this.storage, this.learner);
   }
 
   resetProgress() {
-    this.index = 0;
-    this.solved = {};
-    this.saveProgress();
+    this.learner = newLearner();
+    this.challenge = null;
+    this.recent = [];
+    this.save();
     this.updateMenu();
   }
 
   updateMenu() {
-    const solvedCount = Object.keys(this.solved).length;
-    const label = document.getElementById("start-label");
-    if (label) label.textContent = solvedCount ? "continue" : "start-game";
-    const progress = document.getElementById("menu-progress");
-    if (progress) {
-      progress.textContent = solvedCount
-        ? `${solvedCount}/${CHALLENGES.length} challenges solved · ${this.score} points`
-        : "";
+    const solved = Object.keys(this.learner.course.solved).length;
+    const due = dueCount(this.learner);
+    document.getElementById("course-label").textContent = solved ? "continue-course" : "course";
+    document.getElementById("placement-label").textContent = this.learner.placementDone
+      ? "retake-placement-test"
+      : "placement-test";
+    const parts = [`${masteredCount(this.learner)}/${SKILLS.length} skills mastered`];
+    if (due) parts.push(`${due} review${due === 1 ? "" : "s"} due`);
+    if (solved) parts.push(`course ${solved}/${CHALLENGES.length}`);
+    if (this.score) parts.push(`${this.score} points`);
+    document.getElementById("menu-progress").textContent = parts.join(" · ");
+  }
+
+  renderSkills() {
+    renderSkillMap(document.getElementById("skills-content"), this.learner);
+  }
+
+  // ---------- Starting and stopping ----------
+
+  startCourse() {
+    this.mode = "course";
+    this.enterGame();
+    this.loadCourse(this.courseIndex);
+  }
+
+  startPractice(focus = null) {
+    const resume = this.mode === "practice" && this.challenge && !this.attempt.solved && this.focus === focus;
+    this.mode = "practice";
+    this.focus = focus;
+    this.enterGame();
+    if (resume) this.render();
+    else this.nextPractice();
+  }
+
+  startPlacement() {
+    this.mode = "placement";
+    this.placement = { step: 0, granted: [], finished: false };
+    this.enterGame();
+    this.loadPlacementStep();
+  }
+
+  enterGame() {
+    this.gameStarted = true;
+    showScreen("game-screen");
+  }
+
+  stop() {
+    this.gameStarted = false;
+    this.updateMenu();
+  }
+
+  // ---------- Loading challenges ----------
+
+  setChallenge(challenge) {
+    this.challenge = challenge;
+    this.attempt = { hintsUsed: 0, wrong: 0, solutionShown: false, solved: false, recorded: false };
+    this.render();
+  }
+
+  loadCourse(index) {
+    this.learner.course.index = Math.max(0, Math.min(index, CHALLENGES.length - 1));
+    this.save();
+    this.setChallenge(CHALLENGES[this.learner.course.index]);
+  }
+
+  nextPractice({ avoid = null } = {}) {
+    this.pick = pickNext(this.learner, { focus: this.focus, recent: this.recent, avoid });
+    this.recent = [...this.recent, this.pick.skill].slice(-5);
+    this.setChallenge(generateChallenge(this.pick.skill, this.pick.difficulty, randomSeed()));
+  }
+
+  loadPlacementStep() {
+    this.setChallenge(generatePlacement(this.placement.step, randomSeed()));
+  }
+
+  // Skip / I don't know.
+  skip() {
+    if (this.mode === "placement") {
+      this.finishPlacement();
+    } else if (this.mode === "practice") {
+      const tried = this.giveUp();
+      this.nextPractice({ avoid: tried ? null : this.challenge.skill });
+    } else if (this.courseIndex < CHALLENGES.length - 1) {
+      this.giveUp();
+      this.loadCourse(this.courseIndex + 1);
     }
   }
 
-  // ---------- Flow ----------
-
-  startGame() {
-    this.gameStarted = true;
-    showScreen("game-screen");
-    this.loadChallenge(this.index);
+  previous() {
+    if (this.mode !== "course" || this.courseIndex === 0) return;
+    this.giveUp();
+    this.loadCourse(this.courseIndex - 1);
   }
 
-  loadChallenge(index) {
-    this.index = Math.max(0, Math.min(index, CHALLENGES.length - 1));
-    this.hintsUsed = 0;
-    this.solutionShown = false;
-    this.saveProgress();
+  // Leaving a challenge after trying it counts as a failed attempt.
+  // Returns whether anything was recorded.
+  giveUp() {
+    const a = this.attempt;
+    if (!a || a.solved || a.recorded || this.mode === "placement") return false;
+    if (!a.wrong && !a.hintsUsed && !a.solutionShown) return false;
+    recordResult(this.learner, this.challenge.skills, 0);
+    a.recorded = true;
+    this.save();
+    return true;
+  }
 
+  // Called from the success modal's Continue button.
+  continueAfterSuccess() {
+    document.getElementById("success-modal").classList.remove("active");
+    if (this.mode === "placement") {
+      if (this.placement.finished) {
+        this.mode = "practice";
+        this.focus = null;
+        this.nextPractice();
+      } else {
+        this.loadPlacementStep();
+      }
+    } else if (this.mode === "practice") {
+      this.nextPractice();
+    } else if (this.courseIndex < CHALLENGES.length - 1) {
+      this.loadCourse(this.courseIndex + 1);
+    } else {
+      this.gameStarted = false;
+      this.updateMenu();
+      showScreen("welcome-screen");
+    }
+  }
+
+  // ---------- Rendering ----------
+
+  render() {
     const c = this.challenge;
-    document.getElementById("challenge-title").textContent = `${this.index + 1}. ${c.title}`;
-    document.getElementById("challenge-level").textContent = `Level ${c.levelNumber}: ${c.levelTitle}`;
+    const placement = this.mode === "placement";
+    let title = c.title;
+    let context;
+    if (this.mode === "course") {
+      title = `${this.courseIndex + 1}. ${c.title}`;
+      context = `Level ${c.levelNumber}: ${c.levelTitle}`;
+    } else if (placement) {
+      title = `Question ${this.placement.step + 1}/${PLACEMENT_STEPS}: ${c.title}`;
+      context = "Placement test: no hints. Press \"I don't know\" to stop here.";
+    } else {
+      const from = this.pick.from && SKILL_BY_ID[this.pick.from];
+      context = REASONS[this.pick.reason](SKILL_BY_ID[this.pick.skill], from);
+    }
+
+    document.getElementById("challenge-title").textContent = title;
+    document.getElementById("challenge-level").textContent = context;
     document.getElementById("challenge-description").textContent = c.description;
     document.getElementById("challenge-learn").textContent = c.learn;
+    document.getElementById("challenge-learn").parentElement.hidden = placement;
     document.getElementById("expected-output").textContent = c.expected.join("\n") || "(no output)";
     document.getElementById("expected-details").open = false;
+    document.getElementById("expected-details").hidden = placement;
 
     this.renderFileTree();
     this.showFile(Object.keys(c.files)[0]);
@@ -159,28 +308,6 @@ class GrepGameEngine {
     this.updateUI();
     document.getElementById("command-input").focus();
   }
-
-  nextChallenge() {
-    if (this.index < CHALLENGES.length - 1) this.loadChallenge(this.index + 1);
-  }
-
-  previousChallenge() {
-    if (this.index > 0) this.loadChallenge(this.index - 1);
-  }
-
-  // Called from the success modal's Continue button.
-  continueAfterSuccess() {
-    document.getElementById("success-modal").classList.remove("active");
-    if (this.index < CHALLENGES.length - 1) {
-      this.nextChallenge();
-    } else {
-      this.gameStarted = false;
-      this.updateMenu();
-      showScreen("welcome-screen");
-    }
-  }
-
-  // ---------- Files ----------
 
   renderFileTree() {
     const tree = document.getElementById("file-tree-content");
@@ -207,6 +334,36 @@ class GrepGameEngine {
     });
   }
 
+  updateUI() {
+    const c = this.challenge;
+    const course = this.mode === "course";
+    const placement = this.mode === "placement";
+    const solved = course && this.courseIndex in this.learner.course.solved;
+
+    document.getElementById("stat-label").textContent = course ? "Level" : "Mastered";
+    document.getElementById("current-level").textContent = course
+      ? c.levelNumber
+      : `${masteredCount(this.learner)}/${SKILLS.length}`;
+    document.getElementById("current-score").textContent = this.score;
+
+    let progress;
+    if (course) progress = `Challenge ${this.courseIndex + 1}/${CHALLENGES.length}`;
+    else if (placement) progress = `Question ${this.placement.step + 1}/${PLACEMENT_STEPS}`;
+    else progress = `${SKILL_BY_ID[c.skill].name}: ${percent(skillState(this.learner, c.skill).mastery)} mastered`;
+    document.getElementById("challenge-progress").textContent = progress;
+
+    const points = document.getElementById("challenge-points");
+    points.parentElement.hidden = placement;
+    points.textContent = solved ? "solved ✓" : `${this.pointsAvailable} pts`;
+
+    document.getElementById("btn-prev").disabled = !course || this.courseIndex === 0;
+    const next = document.getElementById("btn-next");
+    next.textContent = placement ? "I don't know →" : "Skip →";
+    next.disabled = course && this.courseIndex === CHALLENGES.length - 1;
+    document.getElementById("btn-hint").disabled = placement;
+    document.getElementById("btn-solution").disabled = placement;
+  }
+
   // ---------- Commands ----------
 
   executeCommand() {
@@ -231,44 +388,138 @@ class GrepGameEngine {
     const result = runCommandLine(command, this.challenge.files);
     if (result.error) {
       this.addOutput(result.error, "error");
+      if (!isExploring(command)) this.wrongAnswer();
       return;
     }
 
     result.output.forEach((line) => this.addOutput(line));
     if (result.output.length === 0) this.addOutput("(no output)", "dim");
-    this.checkAnswer(result.output);
+    this.checkAnswer(result.output, command);
   }
 
-  checkAnswer(output) {
-    const names = Object.keys(this.challenge.files);
-    const got = normalize(output, names);
-    const want = normalize(this.challenge.expected, names);
+  checkAnswer(output, command) {
+    const c = this.challenge;
+    const check = checkOutput(output, c.expected, Object.keys(c.files), command, c.solution);
+    if (check.correct) {
+      this.challengeSuccess(command);
+      return;
+    }
+    if (isExploring(command)) return;
 
-    if (got.length === want.length && got.every((line, i) => line === want[i])) {
-      this.challengeSuccess();
-    } else if (got.length !== want.length) {
-      this.addOutput(`Not quite: expected ${want.length} line(s), got ${got.length}.`, "warning");
-    } else {
-      this.addOutput("Close: right number of lines, but some don't match.", "warning");
+    const { kind, message, skill } = check.diagnosis;
+    this.addOutput(message, "warning");
+    if (this.mode !== "placement" && kind !== "mismatch") {
+      recordMistake(this.learner, skill, kind);
+      this.save();
+    }
+    this.wrongAnswer();
+  }
+
+  wrongAnswer() {
+    this.attempt.wrong++;
+    if (this.attempt.wrong === STRUGGLE_RUNS && this.mode !== "placement") {
+      document.getElementById("expected-details").open = true;
+      this.addOutput("Tip: the expected output is open above. Compare it with yours, or take a 💡 hint.", "info");
     }
   }
 
-  challengeSuccess() {
-    const alreadySolved = this.index in this.solved;
-    const earned = alreadySolved ? 0 : this.pointsAvailable;
-    if (!alreadySolved) this.solved[this.index] = earned;
-    this.saveProgress();
+  challengeSuccess(command) {
+    const c = this.challenge;
+    this.attempt.solved = true;
+    if (this.mode === "placement") {
+      this.placementPassed(command);
+      return;
+    }
+
+    // Credit the skills the command actually used; a failure counts against
+    // the skills the challenge was meant to practise.
+    const score = outcomeScore(this.attempt);
+    const used = detectSkills(command);
+    const changes = recordResult(this.learner, score > 0 && used.length ? used : c.skills, score);
+    this.attempt.recorded = true;
+
+    let pointsText;
+    if (this.mode === "course") {
+      const alreadySolved = this.courseIndex in this.learner.course.solved;
+      const earned = alreadySolved ? 0 : this.pointsAvailable;
+      if (!alreadySolved) this.learner.course.solved[this.courseIndex] = earned;
+      pointsText = alreadySolved ? "Already solved, no new points." : `+${earned} points (total ${this.score})`;
+    } else {
+      const earned = this.pointsAvailable;
+      this.learner.practice.points += earned;
+      this.learner.practice.solved++;
+      pointsText = `+${earned} points (total ${this.score})`;
+    }
+    this.save();
     this.updateUI();
     playSuccessSound();
 
-    const isLast = this.index === CHALLENGES.length - 1;
-    document.getElementById("success-title").textContent = isLast
-      ? "🏆 You finished every challenge!"
-      : "🎉 Challenge complete!";
-    document.getElementById("success-points").textContent = alreadySolved
-      ? "Already solved, no new points."
-      : `+${earned} points (total ${this.score})`;
-    document.getElementById("success-solution").textContent = this.challenge.solution;
+    const unused = score > 0 ? c.skills.filter((id) => !used.includes(id)) : [];
+    const isLastCourse = this.mode === "course" && this.courseIndex === CHALLENGES.length - 1;
+    let title = "🎉 Challenge complete!";
+    if (changes.some((change) => change.newlyMastered)) title = "⭐ Skill mastered!";
+    if (isLastCourse) title = "🏆 You finished every challenge!";
+
+    this.showModal({
+      title,
+      text: pointsText,
+      items: changes.map(
+        (ch) => `${SKILL_BY_ID[ch.id].name}: ${percent(ch.before)} → ${percent(ch.after)}${ch.newlyMastered ? "  ★ mastered" : ""}`
+      ),
+      note: unused.length
+        ? `This one was about ${unused.map((id) => SKILL_BY_ID[id].name).join(", ")}. Your command didn't use it, so it doesn't count for that yet.`
+        : "",
+      solution: c.solution,
+    });
+  }
+
+  placementPassed(command) {
+    const used = detectSkills(command);
+    const granted = grantPlacement(this.learner, used.length ? used : this.challenge.skills);
+    this.placement.granted.push(...granted);
+    this.placement.step++;
+    this.save();
+    if (this.placement.step >= PLACEMENT_STEPS) {
+      this.finishPlacement();
+      return;
+    }
+    this.showModal({
+      title: "✅ Correct!",
+      text: `Question ${this.placement.step}/${PLACEMENT_STEPS} done.`,
+      items: granted.map((id) => `${SKILL_BY_ID[id].name}: tested out`),
+      solution: this.challenge.solution,
+    });
+  }
+
+  finishPlacement() {
+    const { granted } = this.placement;
+    this.placement.finished = true;
+    this.learner.placementDone = true;
+    this.save();
+    this.updateUI();
+    this.showModal({
+      title: "📋 Placement complete",
+      text: granted.length
+        ? `You tested out of ${granted.length} skill${granted.length === 1 ? "" : "s"}. Practice will start from there, and reviews will check them again in a few days.`
+        : "No skills tested out yet, so practice starts from the basics.",
+      items: granted.map((id) => SKILL_BY_ID[id].name),
+      solution: null,
+    });
+  }
+
+  showModal({ title, text, items = [], note = "", solution = null }) {
+    document.getElementById("success-title").textContent = title;
+    document.getElementById("success-points").textContent = text;
+    const list = document.getElementById("success-skills");
+    list.innerHTML = "";
+    for (const item of items) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      list.appendChild(li);
+    }
+    document.getElementById("success-note").textContent = note;
+    document.getElementById("success-solution-block").hidden = !solution;
+    document.getElementById("success-solution").textContent = solution || "";
     document.getElementById("success-modal").classList.add("active");
     // Release focus so Enter/Escape reach the global handler and close the modal.
     document.activeElement.blur();
@@ -283,24 +534,32 @@ class GrepGameEngine {
   // ---------- Help ----------
 
   getHint() {
+    if (this.mode === "placement") {
+      this.addOutput("No hints in the placement test. Press \"I don't know →\" to stop here.", "warning");
+      return;
+    }
     const { hints } = this.challenge;
-    if (this.hintsUsed >= hints.length) {
+    if (this.attempt.hintsUsed >= hints.length) {
       this.addOutput("No more hints. Try Show Solution.", "warning");
       return;
     }
-    this.addOutput(`💡 Hint ${this.hintsUsed + 1}/${hints.length}: ${hints[this.hintsUsed]}`, "info");
-    this.hintsUsed++;
+    this.addOutput(`💡 Hint ${this.attempt.hintsUsed + 1}/${hints.length}: ${hints[this.attempt.hintsUsed]}`, "info");
+    this.attempt.hintsUsed++;
     this.updateUI();
   }
 
   showSolution() {
-    this.solutionShown = true;
+    if (this.mode === "placement") {
+      this.getHint();
+      return;
+    }
+    this.attempt.solutionShown = true;
     this.addOutput(`💡 Solution: ${this.challenge.solution}`, "info");
     this.addOutput("Type it in yourself to finish the challenge.", "info");
     this.updateUI();
   }
 
-  // ---------- UI ----------
+  // ---------- Output ----------
 
   addOutput(text, type = "") {
     const output = document.getElementById("output-content");
@@ -313,18 +572,6 @@ class GrepGameEngine {
 
   clearOutput() {
     document.getElementById("output-content").innerHTML = "";
-  }
-
-  updateUI() {
-    const solved = this.index in this.solved;
-    document.getElementById("current-level").textContent = this.challenge.levelNumber;
-    document.getElementById("current-score").textContent = this.score;
-    document.getElementById("challenge-progress").textContent = `${this.index + 1}/${CHALLENGES.length}`;
-    document.getElementById("challenge-points").textContent = solved
-      ? "solved ✓"
-      : `${this.pointsAvailable} pts`;
-    document.getElementById("btn-prev").disabled = this.index === 0;
-    document.getElementById("btn-next").disabled = this.index === CHALLENGES.length - 1;
   }
 }
 
