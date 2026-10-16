@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateChallenge, generatePlacement, PLACEMENT_STEPS, TEMPLATES } from "../js/generator.js";
+import { generateChallenge, generateFromTemplate, generatePlacement, PLACEMENT_STEPS, TEMPLATES } from "../js/generator.js";
 import { SKILLS, detectSkills } from "../js/skills.js";
 import { runBash, normalizeSpaces } from "./bash.mjs";
 
@@ -50,12 +50,31 @@ test("placement questions are well-formed and use their skills", () => {
   }
 });
 
-test("generated expected output matches real bash", () => {
-  const challenges = [];
+test("every template works, uses its skills, and avoids repeats", () => {
+  for (const template of TEMPLATES) {
+    for (let seed = 1; seed <= 25; seed++) {
+      const c = generateFromTemplate(template.id, seed);
+      const label = `template ${template.id} (${template.skills[0]} d${template.difficulty}) seed ${seed}: ${c.solution}`;
+      assert.equal(c.template, template.id);
+      assert.equal(c.hints[2], c.solution, label);
+      const used = detectSkills(c.solution);
+      for (const s of template.skills) assert.ok(used.includes(s), `${label} should use ${s}`);
+    }
+  }
   for (const skill of SKILLS) {
     for (const d of DIFFICULTIES) {
-      for (let seed = 1; seed <= 8; seed++) challenges.push(generateChallenge(skill.id, d, seed * 7919));
+      for (let seed = 1; seed <= 10; seed++) {
+        const first = generateChallenge(skill.id, d, seed);
+        assert.notEqual(generateChallenge(skill.id, d, seed + 1000, first.template).template, first.template, `${skill.id} d${d}`);
+      }
     }
+  }
+});
+
+test("generated expected output matches real bash", () => {
+  const challenges = [];
+  for (const template of TEMPLATES) {
+    for (let seed = 1; seed <= 3; seed++) challenges.push(generateFromTemplate(template.id, seed * 7919));
   }
   for (let step = 0; step < PLACEMENT_STEPS; step++) challenges.push(generatePlacement(step, step + 1));
 

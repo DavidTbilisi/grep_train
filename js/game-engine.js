@@ -279,7 +279,9 @@ class GrepGameEngine {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([mistake]) => mistake);
-    this.setChallenge(generateVariant(this.pick.skill, this.pick.difficulty, kind, randomSeed(), commonMistakes));
+    // Don't reuse the template of the previous challenge on the same skill.
+    const previous = this.challenge?.skill === this.pick.skill ? this.challenge.template : null;
+    this.setChallenge(generateVariant(this.pick.skill, this.pick.difficulty, kind, randomSeed(), commonMistakes, previous));
   }
 
   loadPlacementStep() {

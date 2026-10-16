@@ -180,11 +180,15 @@ const presentLevels = (logs) => LEVELS.filter((level) => column(logs["app.log"],
 const presentStatuses = (logs) => STATUSES.filter((s) => column(logs["access.log"], 5).includes(s));
 const presentPaths = (logs) => [...new Set(column(logs["access.log"], 4))];
 const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
+const presentIps = (logs) => [...new Set(column(logs["access.log"], 2))];
+const presentUsers = (logs) => USERS.filter((user) => logs["app.log"].includes(`User ${user} `));
 
 // Words that appear in app.log in more than one case (so -i matters).
 function mixedCaseWords(logs) {
   const text = logs["app.log"];
-  return ["timeout", "database"].filter((word) => text.includes(word) && text.includes(capitalize(word)));
+  return ["timeout", "database", "retrying", "connection", "cache"].filter(
+    (word) => text.includes(word) && text.includes(capitalize(word))
+  );
 }
 
 // Counts from a `uniq -c` style output, biggest first.
@@ -908,6 +912,599 @@ const TEMPLATES = [
       hints: ["Extract the file names with grep -o.", "Then sort | uniq -c | sort -rn | head -n 1.", `${report} | head -n 1`],
     };
   }),
+  // ---------- Second templates for every skill and difficulty ----------
+
+  // grep-basic
+  t(["grep-basic"], 1, (r) => {
+    const word = r.pick(["Cache", "Database", "User", "Session"]);
+    return {
+      title: `Lines about ${word}`,
+      description: `Show every line of app.log that contains ${word} (with that exact capitalization).`,
+      files: ["app.log"],
+      solution: `grep ${word} app.log`,
+      hints: ["grep PATTERN FILE.", `The pattern is ${word}.`, `grep ${word} app.log`],
+    };
+  }),
+  t(["grep-basic"], 2, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "One visitor",
+      description: `Show every request made by the IP address ${ip}.`,
+      files: ["access.log"],
+      solution: `grep ${ip} access.log`,
+      hints: ["Search access.log for the IP.", `The pattern is ${ip}.`, `grep ${ip} access.log`],
+    };
+  }),
+  t(["grep-basic"], 3, (r) => {
+    const phrase = r.pick(["logged in", "logged out", "connection lost"]);
+    return {
+      title: `"${phrase}"`,
+      description: `Show the lines of app.log that contain "${phrase}".`,
+      files: ["app.log"],
+      solution: `grep '${phrase}' app.log`,
+      hints: ["The pattern has a space in it.", "Put it in quotes so it stays one argument.", `grep '${phrase}' app.log`],
+    };
+  }),
+
+  // grep-i
+  t(["grep-i"], 1, () => ({
+    title: "Lowercase level",
+    description: "A colleague typed the level as warn, in lowercase. Show the WARN lines of app.log anyway, searching for warn.",
+    files: ["app.log"],
+    solution: "grep -i warn app.log",
+    hints: ["warn and WARN differ only in case.", "-i ignores case.", "grep -i warn app.log"],
+  })),
+  t(["grep-i", "grep-v"], 2, (r, logs) => {
+    const words = mixedCaseWords(logs);
+    if (!words.length) return null;
+    const word = r.pick(words);
+    return {
+      title: `No ${word} at all`,
+      description: `Show the lines of app.log that do NOT mention ${word}, in any case.`,
+      files: ["app.log"],
+      solution: `grep -iv ${word} app.log`,
+      hints: ["Ignore case, and invert the match.", "-i and -v combine as -iv.", `grep -iv ${word} app.log`],
+    };
+  }),
+  t(["grep-i", "grep-or"], 3, (r, logs) => {
+    const words = mixedCaseWords(logs);
+    if (words.length < 2) return null;
+    const [a, b] = r.shuffle(words);
+    return {
+      title: "Either word, any case",
+      description: `Show the lines of app.log that mention ${a} or ${b}, in any case.`,
+      files: ["app.log"],
+      solution: `grep -iE '${a}|${b}' app.log`,
+      hints: ["One grep can match either word.", "Combine -i and -E, and quote the pattern.", `grep -iE '${a}|${b}' app.log`],
+    };
+  }),
+
+  // grep-v
+  t(["grep-v"], 1, () => ({
+    title: "Not OK",
+    description: "Show every request in access.log that did NOT get status 200.",
+    files: ["access.log"],
+    solution: "grep -v ' 200 ' access.log",
+    hints: ["Invert the match.", "The status has a space on each side: ' 200 '.", "grep -v ' 200 ' access.log"],
+  })),
+  t(["grep-v"], 2, () => ({
+    title: "Everything but GET",
+    description: "Show the requests in access.log that are NOT GET requests.",
+    files: ["access.log"],
+    solution: "grep -v GET access.log",
+    hints: ["You want the opposite of a GET search.", "-v inverts the match.", "grep -v GET access.log"],
+  })),
+  t(["grep-v", "pipes"], 3, () => ({
+    title: "Other failures",
+    description: "Show the requests that neither succeeded (200) nor were not found (404).",
+    files: ["access.log"],
+    solution: "grep -v ' 200 ' access.log | grep -v ' 404 '",
+    hints: ["Remove the 200s, then the 404s.", "Pipe one grep -v into another.", "grep -v ' 200 ' access.log | grep -v ' 404 '"],
+  })),
+
+  // grep-count
+  t(["grep-count"], 1, (r) => {
+    const method = r.pick(["GET", "POST"]);
+    return {
+      title: `${method} requests`,
+      description: `How many ${method} requests are in access.log? Print just the number.`,
+      files: ["access.log"],
+      solution: `grep -c ${method} access.log`,
+      hints: ["Count the matching lines.", "-c means count.", `grep -c ${method} access.log`],
+    };
+  }),
+  t(["grep-count"], 2, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "Requests per visitor",
+      description: `How many requests did ${ip} make? Print just the number.`,
+      files: ["access.log"],
+      solution: `grep -c ${ip} access.log`,
+      hints: ["Count the lines containing that IP.", "-c counts matching lines.", `grep -c ${ip} access.log`],
+    };
+  }),
+  t(["grep-count"], 3, () => ({
+    title: "Login attempts",
+    description: "How many login attempts (POST /login) are in access.log? Print just the number.",
+    files: ["access.log"],
+    solution: "grep -c 'POST /login' access.log",
+    hints: ["Search for the method and path together.", "Quote the pattern because of the space; -c counts.", "grep -c 'POST /login' access.log"],
+  })),
+
+  // grep-n
+  t(["grep-n"], 1, (r, logs) => {
+    const users = presentUsers(logs);
+    if (!users.length) return null;
+    const user = r.pick(users);
+    return {
+      title: `Where is ${user}?`,
+      description: `Show the lines of app.log that mention ${user}, with their line numbers.`,
+      files: ["app.log"],
+      solution: `grep -n ${user} app.log`,
+      hints: ["Search for the name.", "-n adds line numbers.", `grep -n ${user} app.log`],
+    };
+  }),
+  t(["grep-n"], 2, () => ({
+    title: "Server errors, by line",
+    description: "Show the requests with status 500, with their line numbers.",
+    files: ["access.log"],
+    solution: "grep -n ' 500 ' access.log",
+    hints: ["Search for the status, with a space on each side.", "-n adds line numbers.", "grep -n ' 500 ' access.log"],
+  })),
+  t(["grep-n", "grep-or"], 3, () => ({
+    title: "Problems, by line",
+    description: "Show every ERROR or WARN line of app.log, with its line number, using one grep.",
+    files: ["app.log"],
+    solution: "grep -nE 'ERROR|WARN' app.log",
+    hints: ["Match either level with -E.", "Add -n: -nE.", "grep -nE 'ERROR|WARN' app.log"],
+  })),
+
+  // grep-or
+  t(["grep-or"], 1, (r, logs) => {
+    const users = presentUsers(logs);
+    if (users.length < 2) return null;
+    const [a, b] = r.shuffle(users);
+    return {
+      title: `${capitalize(a)} or ${b}`,
+      description: `Show the lines of app.log that mention ${a} or ${b}.`,
+      files: ["app.log"],
+      solution: `grep -E '${a}|${b}' app.log`,
+      hints: ["Use -E for either/or.", "A|B, in quotes.", `grep -E '${a}|${b}' app.log`],
+    };
+  }),
+  t(["grep-or"], 2, (r, logs) => {
+    const [a, b] = r.shuffle(presentPaths(logs));
+    if (!b) return null;
+    return {
+      title: "Two pages",
+      description: `Show the requests for ${a} or ${b}.`,
+      files: ["access.log"],
+      solution: `grep -E '${a}|${b}' access.log`,
+      hints: ["One grep can match either path.", "Use -E and A|B, in quotes.", `grep -E '${a}|${b}' access.log`],
+    };
+  }),
+  t(["grep-or", "grep-v"], 3, () => ({
+    title: "Only the problems",
+    description: "With a single grep, show the lines of app.log that are neither INFO nor DEBUG.",
+    files: ["app.log"],
+    solution: "grep -vE 'INFO|DEBUG' app.log",
+    hints: ["Match INFO or DEBUG, then invert.", "-v and -E combine as -vE.", "grep -vE 'INFO|DEBUG' app.log"],
+  })),
+
+  // head-tail
+  t(["head-tail"], 1, (r) => {
+    const n = r.int(2, 5);
+    return {
+      title: `The last ${n}`,
+      description: `Show only the last ${n} lines of app.log.`,
+      files: ["app.log"],
+      solution: `tail -n ${n} app.log`,
+      hints: ["Use the tail tool.", "-n sets how many lines.", `tail -n ${n} app.log`],
+    };
+  }),
+  t(["head-tail"], 2, () => ({
+    title: "First visitor",
+    description: "When did the first request arrive? Show just the first line of access.log.",
+    files: ["access.log"],
+    solution: "head -n 1 access.log",
+    hints: ["The oldest entry is at the top.", "head -n 1 keeps one line.", "head -n 1 access.log"],
+  })),
+  t(["head-tail", "pipes"], 3, (r) => {
+    const k = r.int(2, 6);
+    return {
+      title: `${k} from the end`,
+      description: `Show only the line that is ${k}th from the end of app.log.`,
+      files: ["app.log"],
+      solution: `tail -n ${k} app.log | head -n 1`,
+      hints: [`Take the last ${k} lines...`, "...then keep only the first of those.", `tail -n ${k} app.log | head -n 1`],
+    };
+  }),
+
+  // wc
+  t(["wc"], 1, () => ({
+    title: "How long is the error log?",
+    description: "How many lines are in error.log, stack traces included?",
+    files: ["error.log"],
+    solution: "wc -l error.log",
+    hints: ["wc counts.", "-l counts lines.", "wc -l error.log"],
+  })),
+  t(["wc", "pipes"], 2, () => ({
+    title: "Just the number",
+    description: "Count the lines of access.log so that only the number is printed (no file name): pipe cat into wc -l.",
+    files: ["access.log"],
+    solution: "cat access.log | wc -l",
+    hints: ["wc -l FILE prints the name too.", "Fed from a pipe, wc only prints the number.", "cat access.log | wc -l"],
+  })),
+  t(["wc", "head-tail", "pipes"], 3, (r) => {
+    const n = r.int(3, 6);
+    return {
+      title: "Words up top",
+      description: `How many words are in the first ${n} lines of access.log?`,
+      files: ["access.log"],
+      solution: `head -n ${n} access.log | wc -w`,
+      hints: [`Take the first ${n} lines.`, "wc -w counts words.", `head -n ${n} access.log | wc -w`],
+    };
+  }),
+
+  // pipes
+  t(["pipes"], 1, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "Count with a pipe",
+      description: `Count the requests from ${ip} by piping grep into wc -l.`,
+      files: ["access.log"],
+      solution: `grep ${ip} access.log | wc -l`,
+      hints: ["grep the IP first.", "Then | wc -l.", `grep ${ip} access.log | wc -l`],
+    };
+  }),
+  t(["pipes", "head-tail"], 2, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "Last seen",
+      description: `Show only the most recent request from ${ip}.`,
+      files: ["access.log"],
+      solution: `grep ${ip} access.log | tail -n 1`,
+      hints: ["Find that IP's requests.", "The most recent is at the bottom: tail.", `grep ${ip} access.log | tail -n 1`],
+    };
+  }),
+  t(["pipes", "grep-count"], 3, () => ({
+    title: "Timeouts among errors",
+    description: "How many ERROR lines in app.log mention a timeout (Timeout or timeout)? Print just the number.",
+    files: ["app.log"],
+    solution: "grep ERROR app.log | grep -ci timeout",
+    hints: ["Keep the ERROR lines first.", "Then count, ignoring case: grep -ci.", "grep ERROR app.log | grep -ci timeout"],
+  })),
+
+  // columns
+  t(["columns"], 1, (r) => {
+    const n = r.pick(Object.keys(COLUMNS));
+    return {
+      title: "Pick a column with cut",
+      description: `Print only the ${COLUMNS[n]} of each request, using cut. Columns are separated by single spaces: time ip method path status bytes.`,
+      files: ["access.log"],
+      solution: `cut -d' ' -f${n} access.log`,
+      hints: ["cut -d sets the separator, -f the field number.", `The ${COLUMNS[n]} is field ${n}.`, `cut -d' ' -f${n} access.log`],
+    };
+  }),
+  t(["columns"], 2, () => ({
+    title: "Last words",
+    description: "Print the last word of every line in app.log.",
+    files: ["app.log"],
+    solution: "awk '{print $NF}' app.log",
+    hints: ["Lines have different numbers of words.", "$NF is always the last field.", "awk '{print $NF}' app.log"],
+  })),
+  t(["columns", "pipes"], 3, (r, logs) => {
+    const status = r.pick(presentStatuses(logs).filter((s) => s !== "200"));
+    return {
+      title: `Who and what got ${status}`,
+      description: `For every request with status ${status}, print the IP and the path, separated by a space. Use cut.`,
+      files: ["access.log"],
+      solution: `grep ' ${status} ' access.log | cut -d' ' -f2,4`,
+      hints: [`Keep the ${status} lines first.`, "cut -f2,4 picks fields 2 and 4.", `grep ' ${status} ' access.log | cut -d' ' -f2,4`],
+    };
+  }),
+
+  // sort-uniq
+  t(["sort-uniq"], 1, () => ({
+    title: "Which methods?",
+    description: "List each HTTP method used in access.log once, sorted. (Column 3.)",
+    files: ["access.log"],
+    solution: "awk '{print $3}' access.log | sort -u",
+    hints: ["Print column 3.", "sort -u sorts and drops repeats in one go.", "awk '{print $3}' access.log | sort -u"],
+  })),
+  t(["sort-uniq"], 2, () => ({
+    title: "Who was around?",
+    description: "List each user who logged in or out, once each, sorted. (In 'User alice logged in', the name is column 5.)",
+    files: ["app.log"],
+    solution: "awk '/User/ {print $5}' app.log | sort | uniq",
+    hints: ["Only the User lines, column 5.", "Then sort | uniq.", "awk '/User/ {print $5}' app.log | sort | uniq"],
+  })),
+  t(["sort-uniq", "grep-v"], 3, () => ({
+    title: "Paths with problems",
+    description: "Which paths had at least one request that did NOT get status 200? List each once, sorted.",
+    files: ["access.log"],
+    solution: "grep -v ' 200 ' access.log | awk '{print $4}' | sort -u",
+    hints: ["Drop the 200 lines.", "Print the path, then sort -u.", "grep -v ' 200 ' access.log | awk '{print $4}' | sort -u"],
+  })),
+
+  // uniq-count
+  t(["uniq-count"], 1, () => ({
+    title: "Logins per user",
+    description: "How many times did each user log in? (In 'User alice logged in', the name is column 5.)",
+    files: ["app.log"],
+    solution: "awk '/logged in/ {print $5}' app.log | sort | uniq -c",
+    hints: ["Print the name from the 'logged in' lines.", "sort, then uniq -c.", "awk '/logged in/ {print $5}' app.log | sort | uniq -c"],
+  })),
+  t(["uniq-count", "columns"], 2, () => ({
+    title: "Error histogram",
+    description: "Count each distinct ERROR message in app.log. (cut -d' ' -f4- keeps everything from the 4th field on.)",
+    files: ["app.log"],
+    solution: "grep ERROR app.log | cut -d' ' -f4- | sort | uniq -c",
+    hints: ["Keep the ERROR lines and cut away the date, time, and level.", "Then sort | uniq -c.", "grep ERROR app.log | cut -d' ' -f4- | sort | uniq -c"],
+  })),
+  t(["uniq-count", "awk-filter"], 3, () => ({
+    title: "Failures by status",
+    description: "Count the failed requests (status other than 200) by status code.",
+    files: ["access.log"],
+    solution: "awk '$5 != 200 {print $5}' access.log | sort | uniq -c",
+    hints: ["awk can filter and print the status at once.", "$5 != 200 {print $5}, then sort | uniq -c.", "awk '$5 != 200 {print $5}' access.log | sort | uniq -c"],
+  })),
+
+  // awk-filter
+  t(["awk-filter"], 1, (r) => {
+    const method = r.pick(["GET", "POST"]);
+    return {
+      title: `${method} with awk`,
+      description: `Using awk, show every ${method} request (the method is column 3).`,
+      files: ["access.log"],
+      solution: `awk '$3 == "${method}"' access.log`,
+      hints: ["awk 'CONDITION' prints the matching lines.", `Compare text in quotes: $3 == "${method}".`, `awk '$3 == "${method}"' access.log`],
+    };
+  }),
+  t(["awk-filter", "columns"], 3, () => ({
+    title: "When things went wrong",
+    description: "Print the time and level of every ERROR or WARN line in app.log (time is column 2, level column 3).",
+    files: ["app.log"],
+    solution: "awk '$3 == \"ERROR\" || $3 == \"WARN\" {print $2, $3}' app.log",
+    hints: ["Combine two conditions with ||.", "Then {print $2, $3}.", "awk '$3 == \"ERROR\" || $3 == \"WARN\" {print $2, $3}' app.log"],
+  })),
+
+  // top-n
+  t(["top-n"], 1, (r, logs, run) => {
+    const report = "awk '{print $5}' access.log | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Most common status",
+      description: "Which status code is the most common? Show its count and the code.",
+      files: ["access.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["Count each status (column 5) with uniq -c.", "sort -rn, then head -n 1.", `${report} | head -n 1`],
+    };
+  }),
+  t(["top-n"], 2, (r, logs, run) => {
+    const k = r.int(2, 3);
+    const report = "awk '{print $2}' access.log | sort | uniq -c | sort -rn";
+    if (!clearTop(run(report), k)) return null;
+    return {
+      title: `Top ${k} visitors`,
+      description: `Show the ${k} IPs with the most requests, with their counts, busiest first.`,
+      files: ["access.log"],
+      solution: `${report} | head -n ${k}`,
+      hints: ["Count requests per IP (column 2).", `sort -rn, then head -n ${k}.`, `${report} | head -n ${k}`],
+    };
+  }),
+
+  // awk-sum
+  t(["awk-sum"], 1, () => ({
+    title: "Count with awk",
+    description: "Count the lines of access.log with awk: add 1 on every line, and print the count at the END.",
+    files: ["access.log"],
+    solution: "awk '{n++} END {print n}' access.log",
+    hints: ["n++ adds 1 to n.", "Print n once, in an END block.", "awk '{n++} END {print n}' access.log"],
+  })),
+  t(["awk-sum", "awk-filter"], 2, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "One visitor's traffic",
+      description: `How many bytes (column 6) did ${ip} receive in total? Print just the number.`,
+      files: ["access.log"],
+      solution: `awk '$2 == "${ip}" {s += $6} END {print s}' access.log`,
+      hints: ["Only add up that IP's lines.", `$2 == "${ip}" {s += $6}, then print s at the END.`, `awk '$2 == "${ip}" {s += $6} END {print s}' access.log`],
+    };
+  }),
+  t(["awk-sum", "awk-filter"], 3, () => ({
+    title: "Bytes of failures",
+    description: "How many bytes did the failed responses (status 400 and up) add up to? Print just the number.",
+    files: ["access.log"],
+    solution: "awk '$5 >= 400 {s += $6} END {print s}' access.log",
+    hints: ["awk compares numbers: $5 >= 400.", "Add up $6 for those lines; print at the END.", "awk '$5 >= 400 {s += $6} END {print s}' access.log"],
+  })),
+
+  // awk-stats
+  t(["awk-stats"], 1, () => ({
+    title: "Smallest response",
+    description: "What's the smallest response size in access.log (bytes, column 6)? Print just the number.",
+    files: ["access.log"],
+    solution: "awk 'NR == 1 || $6 < min {min = $6} END {print min}' access.log",
+    hints: ["Keep the smallest value seen so far.", "Start from the first line: NR == 1 || $6 < min {min = $6}.", "awk 'NR == 1 || $6 < min {min = $6} END {print min}' access.log"],
+  })),
+  t(["awk-stats", "awk-filter"], 2, () => ({
+    title: "Average success",
+    description: "What's the average size of the successful (status 200) responses? Print it the way awk's print shows numbers.",
+    files: ["access.log"],
+    solution: "awk '$5 == 200 {s += $6; n++} END {print s/n}' access.log",
+    hints: ["Add up and count only the 200 lines.", "Divide by n, not NR.", "awk '$5 == 200 {s += $6; n++} END {print s/n}' access.log"],
+  })),
+  t(["awk-stats", "awk-filter"], 3, (r, logs) => {
+    const ip = r.pick(presentIps(logs));
+    return {
+      title: "Average per visit",
+      description: `What's the average response size for ${ip}, with exactly one decimal place?`,
+      files: ["access.log"],
+      solution: `awk '$2 == "${ip}" {s += $6; n++} END {printf "%.1f\\n", s/n}' access.log`,
+      hints: ["Add up and count that IP's lines.", 'printf "%.1f\\n" prints one decimal place.', `awk '$2 == "${ip}" {s += $6; n++} END {printf "%.1f\\n", s/n}' access.log`],
+    };
+  }),
+
+  // awk-group
+  t(["awk-group"], 1, () => ({
+    title: "Status counts, awk style",
+    description: "Count the requests per status code with an awk array. Print each code and its count, sorted.",
+    files: ["access.log"],
+    solution: "awk '{n[$5]++} END {for (s in n) print s, n[s]}' access.log | sort",
+    hints: ["n[$5]++ counts per status.", "Print each key and count at the END, then sort.", "awk '{n[$5]++} END {for (s in n) print s, n[s]}' access.log | sort"],
+  })),
+  t(["awk-group", "pipes"], 2, () => ({
+    title: "Bytes per method",
+    description: "Total bytes per HTTP method, biggest first: print the total, then the method.",
+    files: ["access.log"],
+    solution: "awk '{b[$3] += $6} END {for (m in b) print b[m], m}' access.log | sort -rn",
+    hints: ["Key the array by the method, column 3.", "Print the total first, then sort -rn.", "awk '{b[$3] += $6} END {for (m in b) print b[m], m}' access.log | sort -rn"],
+  })),
+  t(["awk-group", "top-n"], 3, (r, logs, run) => {
+    const report = "awk '$5 != 200 {n[$2]++} END {for (ip in n) print n[ip], ip}' access.log | sort -rn";
+    if (!clearTop(run(report), 1)) return null;
+    return {
+      title: "Most failures",
+      description: "Which IP had the most failed requests (status other than 200)? Show the count and the IP, using an awk array.",
+      files: ["access.log"],
+      solution: `${report} | head -n 1`,
+      hints: ["$5 != 200 {n[$2]++} counts failures per IP.", "Print count and IP, then sort -rn | head -n 1.", `${report} | head -n 1`],
+    };
+  }),
+
+  // regex-anchors
+  t(["regex-anchors"], 1, () => ({
+    title: "Stack traces only",
+    description: "Show only the stack-trace lines of error.log. They start with a space.",
+    files: ["error.log"],
+    solution: "grep '^ ' error.log",
+    hints: ["^ matches the start of a line.", "'^ ' is a line that starts with a space.", "grep '^ ' error.log"],
+  })),
+  t(["regex-anchors", "grep-count"], 2, () => ({
+    title: "How many entries?",
+    description: "How many error entries does error.log have? Each one is a line that starts with the date (20...). Print just the number.",
+    files: ["error.log"],
+    solution: "grep -c '^20' error.log",
+    hints: ["Anchor the pattern to the start of the line.", "'^20' plus -c.", "grep -c '^20' error.log"],
+  })),
+  t(["regex-anchors", "regex-classes"], 3, (r, logs) => {
+    if (!presentIps(logs).some((ip) => ip.startsWith("10."))) return null;
+    return {
+      title: "The 10.x network",
+      description: "Show the requests from IPs that start with 10. The IP comes right after the time, so anchor the pattern at the start of the line.",
+      files: ["access.log"],
+      solution: "grep '^[0-9:]* 10\\.' access.log",
+      hints: ["^[0-9:]* matches the time at the start of the line.", "Then a space and 10\\. (a literal dot).", "grep '^[0-9:]* 10\\.' access.log"],
+    };
+  }),
+
+  // regex-classes
+  t(["regex-classes"], 1, (r, logs, run) => {
+    if (!run("grep 'report-' app.log").length) return null;
+    return {
+      title: "Early reports",
+      description: "Show the job lines for reports 1 to 5 (Job report-1 ... Job report-5).",
+      files: ["app.log"],
+      solution: "grep 'report-[1-5]' app.log",
+      hints: ["[1-5] matches one digit from 1 to 5.", "Put it right after report-.", "grep 'report-[1-5]' app.log"],
+    };
+  }),
+  t(["regex-classes"], 2, () => ({
+    title: "Two-digit line numbers",
+    description: "Show the stack-trace lines whose line number has exactly two digits (like PaymentClient.java:88).",
+    files: ["error.log"],
+    solution: "grep 'java:[1-9][0-9])' error.log",
+    hints: ["Two digits, then the closing parenthesis.", "[1-9][0-9] is 10 to 99.", "grep 'java:[1-9][0-9])' error.log"],
+  })),
+  t(["regex-classes", "grep-count"], 3, () => ({
+    title: "Not alice",
+    description: "How many 'User ...' lines are about someone whose name does NOT start with a? Print just the number.",
+    files: ["app.log"],
+    solution: "grep -c 'User [^a]' app.log",
+    hints: ["[^a] matches any character except a.", "Count with -c.", "grep -c 'User [^a]' app.log"],
+  })),
+
+  // grep-w
+  t(["grep-w"], 1, (r, logs, run) => {
+    if (run("grep at error.log").length === run("grep -w at error.log").length) return null;
+    return {
+      title: "The word at",
+      description: "Show the lines of error.log that contain the word at on its own (not inside Database or Notification).",
+      files: ["error.log"],
+      solution: "grep -w at error.log",
+      hints: ["grep at also matches inside longer words.", "-w matches whole words only.", "grep -w at error.log"],
+    };
+  }),
+  t(["grep-w", "grep-count"], 2, (r, logs, run) => {
+    if (run("grep -c in app.log")[0] === run("grep -wc in app.log")[0]) return null;
+    return {
+      title: "Count the word in",
+      description: "How many lines of app.log contain the word in on its own? Print just the number.",
+      files: ["app.log"],
+      solution: "grep -wc in app.log",
+      hints: ["Whole words only, and count.", "-w and -c combine as -wc.", "grep -wc in app.log"],
+    };
+  }),
+  t(["grep-w", "pipes"], 3, (r, logs, run) => {
+    if (run("grep -w in app.log").length === run("grep in app.log").length) return null;
+    return {
+      title: "Logins via the word in",
+      description: "Using the whole word in, show the lines where a user logged in, and only the ones about users (lines that also contain User).",
+      files: ["app.log"],
+      solution: "grep -w in app.log | grep User",
+      hints: ["First the lines with the word in.", "Then keep the ones with User.", "grep -w in app.log | grep User"],
+    };
+  }),
+
+  // regex-repeat
+  t(["regex-repeat", "regex-anchors"], 1, () => ({
+    title: "Indented at",
+    description: "Show the stack-trace lines: one or more spaces at the start of the line, then at.",
+    files: ["error.log"],
+    solution: "grep -E '^ +at' error.log",
+    hints: ["With -E, + means one or more.", "^ + is one or more spaces at the start.", "grep -E '^ +at' error.log"],
+  })),
+  t(["regex-repeat", "grep-count"], 2, () => ({
+    title: "Two-digit frames",
+    description: "How many stack frames point at a two-digit line number (like :88)? Print just the number.",
+    files: ["error.log"],
+    solution: "grep -cE 'java:[0-9]{2}\\)' error.log",
+    hints: ["{2} means exactly two.", "End with \\) so three-digit numbers don't match.", "grep -cE 'java:[0-9]{2}\\)' error.log"],
+  })),
+  t(["regex-repeat", "regex-classes"], 3, () => ({
+    title: "Under a second",
+    description: "Show the slow queries that took less than 1000ms: exactly three digits after took.",
+    files: ["app.log"],
+    solution: "grep -E 'took [0-9]{3}ms' app.log",
+    hints: ["[0-9]{3} is exactly three digits.", "Put took before it and ms after.", "grep -E 'took [0-9]{3}ms' app.log"],
+  })),
+
+  // grep-o
+  t(["grep-o"], 1, (r, logs, run) => {
+    if (!run("grep '%' app.log").length) return null;
+    return {
+      title: "Just the percentages",
+      description: "Print just the memory usage percentages from app.log (like 91%), one per line.",
+      files: ["app.log"],
+      solution: "grep -oE '[0-9]+%' app.log",
+      hints: ["-o prints only the matching part.", "[0-9]+ then %.", "grep -oE '[0-9]+%' app.log"],
+    };
+  }),
+  t(["grep-o"], 2, () => ({
+    title: "Just the users",
+    description: "Print just 'User name' (like User alice) from every line of app.log that has one.",
+    files: ["app.log"],
+    solution: "grep -oE 'User [a-z]+' app.log",
+    hints: ["-o prints only the match.", "User, a space, then [a-z]+.", "grep -oE 'User [a-z]+' app.log"],
+  })),
+  t(["grep-o", "top-n"], 3, () => ({
+    title: "The slowest query",
+    description: "What was the slowest query in app.log? Print just its duration (like 2300ms).",
+    files: ["app.log"],
+    solution: "grep -oE '[0-9]+ms' app.log | sort -n | tail -n 1",
+    hints: ["Extract the durations with grep -o.", "sort -n, then the last one.", "grep -oE '[0-9]+ms' app.log | sort -n | tail -n 1"],
+  })),
 ];
 
 // Placement test: each question needs several skills at once. Passing one
@@ -982,6 +1579,11 @@ const PLACEMENT = [
 
 // ---------- Building challenges ----------
 
+// Each template's id is its index, so the engine can avoid repeating one.
+TEMPLATES.forEach((template, id) => {
+  template.id = id;
+});
+
 function templatesFor(skill, difficulty) {
   const own = TEMPLATES.filter((tpl) => tpl.skills[0] === skill);
   const exact = own.filter((tpl) => tpl.difficulty === difficulty);
@@ -1013,6 +1615,7 @@ function build(templates, seed, extra) {
       learn: primary.learn,
       skills: template.skills,
       difficulty: template.difficulty,
+      template: template.id,
       expected,
       seed,
       ...extra,
@@ -1021,9 +1624,20 @@ function build(templates, seed, extra) {
   throw new Error(`Could not generate a challenge for ${templates[0].skills[0]} (seed ${seed})`);
 }
 
-/** A practice challenge for `skill` at `difficulty` (1-3). Same seed, same challenge. */
-function generateChallenge(skill, difficulty, seed) {
-  return build(templatesFor(skill, difficulty), seed, { skill });
+/**
+ * A practice challenge for `skill` at `difficulty` (1-3). Same seed, same
+ * challenge. `avoid` is a template id not to use (the previous challenge's),
+ * unless it's the only one.
+ */
+function generateChallenge(skill, difficulty, seed, avoid = null) {
+  const templates = templatesFor(skill, difficulty);
+  const fresh = templates.filter((template) => template.id !== avoid);
+  return build(fresh.length ? fresh : templates, seed, { skill });
+}
+
+/** A challenge from one specific template (for tests). */
+function generateFromTemplate(id, seed) {
+  return build([TEMPLATES[id]], seed, { skill: TEMPLATES[id].skills[0] });
 }
 
 /** Placement question number `step` (0-based). */
@@ -1033,7 +1647,7 @@ function generatePlacement(step, seed) {
 
 const PLACEMENT_STEPS = PLACEMENT.length;
 
-export { generateChallenge, generatePlacement, generateLogs, makeRng, PLACEMENT_STEPS, TEMPLATES };
+export { generateChallenge, generateFromTemplate, generatePlacement, generateLogs, makeRng, PLACEMENT_STEPS, TEMPLATES };
 
 // Building blocks for the incident scenarios (incidents.js).
 export { pad, clock, bytesFor, clearTop, IPS, APP_MESSAGES, TRACES };

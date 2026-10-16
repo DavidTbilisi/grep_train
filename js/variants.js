@@ -298,19 +298,20 @@ function makePredict(challenge, r) {
 
 /**
  * A practice challenge of the given kind ("write", "fix", or "predict").
- * Falls back to a plain write challenge if no variant fits.
+ * Falls back to a plain write challenge if no variant fits. `avoid` is a
+ * template id not to reuse (see generateChallenge).
  */
-function generateVariant(skill, difficulty, kind, seed, preferKinds = []) {
+function generateVariant(skill, difficulty, kind, seed, preferKinds = [], avoid = null) {
   if (kind !== "write") {
     for (let i = 0; i < 20; i++) {
       const s = (seed + i * 7919) >>> 0;
-      const challenge = generateChallenge(skill, difficulty, s);
+      const challenge = generateChallenge(skill, difficulty, s, avoid);
       const r = makeRng(s ^ 0x9e3779b9);
       const variant = kind === "fix" ? makeFix(challenge, r, preferKinds) : makePredict(challenge, r);
       if (variant) return variant;
     }
   }
-  return { ...generateChallenge(skill, difficulty, seed), kind: "write" };
+  return { ...generateChallenge(skill, difficulty, seed, avoid), kind: "write" };
 }
 
 export { MUTATIONS, mutants, makeFix, makePredict, generateVariant };
