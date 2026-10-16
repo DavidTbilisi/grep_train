@@ -55,6 +55,7 @@ const ACTIONS = {
   solution: () => game.showSolution(),
   prev: () => game.previous(),
   next: () => game.skip(),
+  choose: (button) => game.answerChoice(Number(button.dataset.choice)),
   continue: () => {
     if (isSuccessModalOpen()) game.continueAfterSuccess();
   },

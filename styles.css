@@ -821,6 +821,70 @@ body::before {
   display: none;
 }
 
+/* Fix / predict challenges */
+.challenge-command {
+  margin-bottom: 15px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.5);
+  border-left: 3px solid #ffd93d;
+  color: var(--primary-color);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.choices.wide {
+  grid-template-columns: 1fr;
+}
+
+.choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--secondary-color);
+  border-radius: 4px;
+  color: #cccccc;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:hover:not(:disabled) {
+  background: rgba(0, 204, 255, 0.1);
+}
+
+.choice pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.choice-number {
+  color: #ffaa00;
+  font-weight: bold;
+}
+
+.choice.wrong {
+  border-color: #ff6b6b;
+  opacity: 0.45;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.choice.right {
+  border-color: #6bcf7f;
+  box-shadow: 0 0 12px rgba(107, 207, 127, 0.4);
+}
+
 /* Skill Map */
 .skills-intro {
   font-size: 13px;

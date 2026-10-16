@@ -8,6 +8,8 @@
 //                 whose prerequisites are in place (teaching order)
 //   4. stretch:   everything is mastered, so harder versions of the skill
 //                 whose review is nearest
+//
+// chooseKind then decides whether the challenge is predict, fix, or write.
 
 import { SKILLS, SKILL_BY_ID } from "./skills.js";
 import { skillState, isMastered, isUnlocked, isDue } from "./learner.js";
@@ -67,4 +69,18 @@ function pickNext(learner, { now = Date.now(), focus = null, recent = [], avoid 
   return { skill: pool[0] || mastered[0] || SKILLS[0].id, reason: "stretch", difficulty: 3 };
 }
 
-export { pickNext, difficultyFor };
+/**
+ * How to present the picked skill: "predict" (read a command, pick its
+ * output), "fix" (repair a nearly-right command), or "write" (from scratch).
+ * Read first when a skill is new, fix when struggling (a nearly-right command
+ * is a scaffold), and a mix once it's familiar. `roll` is random in [0, 1).
+ */
+function chooseKind(pick, learner, roll) {
+  if (pick.reason === "remediate") return "fix";
+  if (skillState(learner, pick.skill).attempts === 0) return "predict";
+  if (pick.reason === "review") return roll < 1 / 3 ? "predict" : roll < 2 / 3 ? "fix" : "write";
+  if (pick.reason === "stretch") return roll < 0.5 ? "fix" : "write";
+  return roll < 0.25 ? "fix" : "write";
+}
+
+export { pickNext, difficultyFor, chooseKind };

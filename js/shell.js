@@ -144,8 +144,6 @@ function toInt(cmd, value, what) {
   return parseInt(value, 10);
 }
 
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 // Convert a POSIX basic/extended regex into a JavaScript RegExp source.
 function posixToJs(pattern, extended) {
   const CLASSES = {

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pickNext } from "../js/scheduler.js";
+import { pickNext, chooseKind } from "../js/scheduler.js";
 import { newLearner, recordResult, grantPlacement, DAY } from "../js/learner.js";
 import { SKILLS } from "../js/skills.js";
 
@@ -91,4 +91,17 @@ test("a simulated perfect player masters every skill", () => {
     assert.ok(++steps < 100, "should finish in well under 100 challenges");
   }
   assert.equal(steps, SKILLS.length * 3);
+});
+
+test("chooseKind: read a new skill first, fix when struggling, mix when familiar", () => {
+  const learner = newLearner();
+  assert.equal(chooseKind({ skill: "grep-i", reason: "new" }, learner, 0.9), "predict");
+  assert.equal(chooseKind({ skill: "grep-i", reason: "focus" }, learner, 0.9), "predict");
+  assert.equal(chooseKind({ skill: "grep-i", reason: "remediate" }, learner, 0.9), "fix");
+  recordResult(learner, ["grep-i"], 1, NOW);
+  assert.equal(chooseKind({ skill: "grep-i", reason: "learn" }, learner, 0.1), "fix");
+  assert.equal(chooseKind({ skill: "grep-i", reason: "learn" }, learner, 0.9), "write");
+  const review = [0.1, 0.5, 0.9].map((roll) => chooseKind({ skill: "grep-i", reason: "review" }, learner, roll));
+  assert.deepEqual(review, ["predict", "fix", "write"]);
+  assert.equal(chooseKind({ skill: "grep-i", reason: "stretch" }, learner, 0.9), "write");
 });

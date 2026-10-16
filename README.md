@@ -33,6 +33,7 @@ Your progress is saved in the browser.
 - **Wrong answers are diagnosed**: wrong order, `uniq` without `sort`, lines instead of a count, missing `-i`, inverted `-v`, wrong column, and more. Each one names the fix.
 - **Picking the next challenge**: two misses in a row step back to the weakest prerequisite (or an easier version); otherwise reviews that are due come first, then the skill you're learning, then the next new skill whose prerequisites are in place. Difficulty (1-3) rises with mastery.
 - **Spaced review**: mastered skills come back after 1, 3, 7, 14, and 30 days.
+- **Three kinds of challenge**: *predict* (read a command and pick what it prints; wrong choices are what common mistakes print), *fix* (a nearly-right command with a realistic bug, already in the prompt), and *write* (from scratch). New skills start with predict, struggling turns into fix, fix challenges target your most common mistakes, and familiar skills get a mix. Predicting alone can't master a skill: that takes writing.
 - **Fresh logs every time**: practice challenges are generated from a seed, with new `app.log` / `access.log` content, so you can't just memorize answers.
 
 **Keys:** `Enter` run · `Tab` autocomplete · `↑`/`↓` command history · `h` hint · `Esc` menu
@@ -64,12 +65,15 @@ Commands can be chained with pipes (`|`), and arguments can use `'single'` and `
 ## 🚀 Running Locally
 
 ```bash
+npm install     # dev tools (ESLint) only; the game itself has no dependencies
 npm run start   # http://localhost:8000
 npm test        # unit tests + the shell simulator and generated challenges vs real bash (Node 21+)
-npm run deploy  # publish to GitHub Pages
+npm run lint    # ESLint
 ```
 
 There's no build step. The game is plain HTML/CSS and native ES modules.
+
+**Deploying:** push to `main`. GitHub Pages serves the repository root of `main` directly, and GitHub Actions runs lint and tests on every push and pull request.
 
 ## 📁 Project Structure
 
@@ -85,6 +89,7 @@ js/
 ├── learner.js          # Mastery model, spaced review, saved progress
 ├── scheduler.js        # Picks the next skill and difficulty
 ├── generator.js        # Seeded log generator + challenge templates per skill
+├── variants.js         # Fix-the-command and predict-the-output challenges, built from realistic mistakes
 ├── diagnose.js         # Answer checking and wrong-answer diagnosis
 ├── skill-map.js        # Skill map screen
 ├── command-autocomplete.js

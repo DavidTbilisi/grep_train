@@ -335,16 +335,13 @@ const TEMPLATES = [
       hints: ["Search for the path.", "Add -n for line numbers.", `grep -n ${path} access.log`],
     };
   }),
-  t(["grep-n", "grep-v"], 3, (r, logs) => {
-    const status = "200";
-    return {
-      title: "Failures, by line",
-      description: `Show every request in access.log that did NOT get status ${status}, with its line number.`,
-      files: ["access.log"],
-      solution: `grep -vn ${status} access.log`,
-      hints: ["Invert the match and number the lines.", "-v and -n combine as -vn.", `grep -vn ${status} access.log`],
-    };
-  }),
+  t(["grep-n", "grep-v"], 3, () => ({
+    title: "Failures, by line",
+    description: "Show every request in access.log that did NOT get status 200, with its line number.",
+    files: ["access.log"],
+    solution: "grep -vn 200 access.log",
+    hints: ["Invert the match and number the lines.", "-v and -n combine as -vn.", "grep -vn 200 access.log"],
+  })),
 
   // grep-or
   t(["grep-or"], 1, (r, logs) => {

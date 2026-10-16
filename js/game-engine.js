@@ -2,7 +2,8 @@
 //
 // Three modes:
 //   course     the 16 hand-written challenges in game-data.js, in order
-//   practice   generated challenges; the scheduler picks the skill and difficulty
+//   practice   generated challenges; the scheduler picks the skill, difficulty,
+//              and kind: write a command, fix a broken one, or predict an output
 //   placement  a short test; each pass grants the skills used, so experienced
 //              players skip what they already know
 
@@ -21,8 +22,9 @@ import {
   masteredCount,
   dueCount,
 } from "./learner.js";
-import { pickNext } from "./scheduler.js";
-import { generateChallenge, generatePlacement, PLACEMENT_STEPS } from "./generator.js";
+import { pickNext, chooseKind } from "./scheduler.js";
+import { generatePlacement, PLACEMENT_STEPS } from "./generator.js";
+import { generateVariant } from "./variants.js";
 import { checkOutput } from "./diagnose.js";
 import { renderSkillMap } from "./skill-map.js";
 import { playSuccessSound } from "./audio.js";
@@ -31,6 +33,8 @@ import { showScreen } from "./ui.js";
 const POINTS = 100;
 const HINT_COST = 25;
 const STRUGGLE_RUNS = 3; // wrong runs before the expected output opens by itself
+// Reading a command isn't writing one: predicting alone can't master a skill.
+const PREDICT_SCORE_CAP = 0.7;
 
 // One flat list, each challenge knowing its level and expected output.
 const CHALLENGES = LEVELS.flatMap((level, levelIndex) =>
@@ -114,9 +118,18 @@ class GrepGameEngine {
     return course + this.learner.practice.points;
   }
 
+  get kind() {
+    return this.challenge?.kind || "write";
+  }
+
+  // Hints, and wrong picks in a predict challenge, each cost HINT_COST.
+  get penalties() {
+    return this.attempt.hintsUsed + (this.kind === "predict" ? this.attempt.wrong : 0);
+  }
+
   get pointsAvailable() {
     if (this.attempt.solutionShown) return 0;
-    return Math.max(HINT_COST, POINTS - this.attempt.hintsUsed * HINT_COST);
+    return Math.max(HINT_COST, POINTS - this.penalties * HINT_COST);
   }
 
   init() {
@@ -201,7 +214,7 @@ class GrepGameEngine {
 
   setChallenge(challenge) {
     this.challenge = challenge;
-    this.attempt = { hintsUsed: 0, wrong: 0, solutionShown: false, solved: false, recorded: false };
+    this.attempt = { hintsUsed: 0, wrong: 0, solutionShown: false, solved: false, recorded: false, eliminated: [] };
     this.render();
   }
 
@@ -214,7 +227,13 @@ class GrepGameEngine {
   nextPractice({ avoid = null } = {}) {
     this.pick = pickNext(this.learner, { focus: this.focus, recent: this.recent, avoid });
     this.recent = [...this.recent, this.pick.skill].slice(-5);
-    this.setChallenge(generateChallenge(this.pick.skill, this.pick.difficulty, randomSeed()));
+    const kind = chooseKind(this.pick, this.learner, Math.random());
+    // Fix challenges prefer the bugs this player makes most.
+    const commonMistakes = Object.entries(this.learner.mistakes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([mistake]) => mistake);
+    this.setChallenge(generateVariant(this.pick.skill, this.pick.difficulty, kind, randomSeed(), commonMistakes));
   }
 
   loadPlacementStep() {
@@ -279,7 +298,9 @@ class GrepGameEngine {
   render() {
     const c = this.challenge;
     const placement = this.mode === "placement";
+    const predict = this.kind === "predict";
     let title = c.title;
+    let description = c.description;
     let context;
     if (this.mode === "course") {
       title = `${this.courseIndex + 1}. ${c.title}`;
@@ -291,22 +312,85 @@ class GrepGameEngine {
       const from = this.pick.from && SKILL_BY_ID[this.pick.from];
       context = REASONS[this.pick.reason](SKILL_BY_ID[this.pick.skill], from);
     }
+    if (this.kind === "fix") {
+      title = `Fix it: ${c.title}`;
+      description = `Goal: ${c.description} The command below tries, but it has a bug. It's already in the prompt: fix it and run it.`;
+    } else if (predict) {
+      title = "What does this command print?";
+      description = "Read the command and the file, then pick its output: click a choice, or type its number and press Enter.";
+    }
 
     document.getElementById("challenge-title").textContent = title;
     document.getElementById("challenge-level").textContent = context;
-    document.getElementById("challenge-description").textContent = c.description;
+    document.getElementById("challenge-description").textContent = description;
+    const shown = document.getElementById("challenge-command");
+    shown.hidden = this.kind === "write";
+    shown.textContent = this.kind === "fix" ? c.broken : c.solution;
     document.getElementById("challenge-learn").textContent = c.learn;
     document.getElementById("challenge-learn").parentElement.hidden = placement;
     document.getElementById("expected-output").textContent = c.expected.join("\n") || "(no output)";
     document.getElementById("expected-details").open = false;
-    document.getElementById("expected-details").hidden = placement;
+    document.getElementById("expected-details").hidden = placement || predict;
+    this.renderChoices();
 
     this.renderFileTree();
     this.showFile(Object.keys(c.files)[0]);
     this.clearOutput();
-    this.addOutput("Type a command and press Enter. Type help to list the tools.", "info");
+    this.addOutput(
+      predict ? "Pick the output: type its number and press Enter." : "Type a command and press Enter. Type help to list the tools.",
+      "info"
+    );
     this.updateUI();
-    document.getElementById("command-input").focus();
+    const input = document.getElementById("command-input");
+    input.value = this.kind === "fix" ? c.broken : "";
+    input.placeholder = predict
+      ? `Type 1-${c.choices.length}, or click a choice`
+      : "e.g. grep ERROR app.log | wc -l   (Tab completes, ↑ history)";
+    input.focus();
+  }
+
+  // The answer choices of a predict challenge.
+  renderChoices() {
+    const box = document.getElementById("choices");
+    box.innerHTML = "";
+    box.hidden = this.kind !== "predict";
+    if (box.hidden) return;
+    // Long log lines read better as full-width rows than in narrow columns.
+    const longest = Math.max(...this.challenge.choices.flatMap((choice) => choice.output.map((line) => line.length)));
+    box.classList.toggle("wide", longest > 32);
+    this.challenge.choices.forEach((choice, i) => {
+      const button = document.createElement("button");
+      button.className = "choice";
+      button.dataset.action = "choose";
+      button.dataset.choice = i;
+      const eliminated = this.attempt.eliminated.includes(i);
+      button.disabled = eliminated || this.attempt.solved;
+      if (eliminated) button.classList.add("wrong");
+      if (choice.correct && (this.attempt.solved || this.attempt.solutionShown)) button.classList.add("right");
+      const number = document.createElement("span");
+      number.className = "choice-number";
+      number.textContent = i + 1;
+      const output = document.createElement("pre");
+      output.textContent = choice.output.join("\n");
+      button.append(number, output);
+      box.appendChild(button);
+    });
+  }
+
+  answerChoice(index) {
+    const choice = this.challenge.choices?.[index];
+    if (!choice || this.attempt.solved || this.attempt.eliminated.includes(index)) return;
+    if (choice.correct) {
+      this.attempt.solved = true;
+      this.renderChoices();
+      this.challengeSuccess(this.challenge.solution);
+      return;
+    }
+    this.attempt.eliminated.push(index);
+    this.attempt.wrong++;
+    this.addOutput(`Not ${index + 1}. ${choice.why}`, "warning");
+    this.renderChoices();
+    this.updateUI();
   }
 
   renderFileTree() {
@@ -384,6 +468,15 @@ class GrepGameEngine {
       HELP.forEach((line) => this.addOutput(line, "info"));
       return;
     }
+    if (this.kind === "predict") {
+      const count = this.challenge.choices.length;
+      if (/^\d+$/.test(command) && Number(command) >= 1 && Number(command) <= count) {
+        this.answerChoice(Number(command) - 1);
+      } else {
+        this.addOutput(`This one is about reading, not running: pick an answer by its number (1-${count}).`, "warning");
+      }
+      return;
+    }
 
     const result = runCommandLine(command, this.challenge.files);
     if (result.error) {
@@ -433,7 +526,9 @@ class GrepGameEngine {
 
     // Credit the skills the command actually used; a failure counts against
     // the skills the challenge was meant to practise.
-    const score = outcomeScore(this.attempt);
+    const predict = this.kind === "predict";
+    let score = outcomeScore({ ...this.attempt, hintsUsed: this.penalties, wrong: predict ? 0 : this.attempt.wrong });
+    if (predict) score = Math.min(score, PREDICT_SCORE_CAP);
     const used = detectSkills(command);
     const changes = recordResult(this.learner, score > 0 && used.length ? used : c.skills, score);
     this.attempt.recorded = true;
@@ -454,7 +549,7 @@ class GrepGameEngine {
     this.updateUI();
     playSuccessSound();
 
-    const unused = score > 0 ? c.skills.filter((id) => !used.includes(id)) : [];
+    const unused = score > 0 && !predict ? c.skills.filter((id) => !used.includes(id)) : [];
     const isLastCourse = this.mode === "course" && this.courseIndex === CHALLENGES.length - 1;
     let title = "🎉 Challenge complete!";
     if (changes.some((change) => change.newlyMastered)) title = "⭐ Skill mastered!";
@@ -466,10 +561,16 @@ class GrepGameEngine {
       items: changes.map(
         (ch) => `${SKILL_BY_ID[ch.id].name}: ${percent(ch.before)} → ${percent(ch.after)}${ch.newlyMastered ? "  ★ mastered" : ""}`
       ),
-      note: unused.length
-        ? `This one was about ${unused.map((id) => SKILL_BY_ID[id].name).join(", ")}. Your command didn't use it, so it doesn't count for that yet.`
-        : "",
+      note: [
+        this.kind === "fix" ? `The bug: ${c.bug}` : "",
+        unused.length
+          ? `This one was about ${unused.map((id) => SKILL_BY_ID[id].name).join(", ")}. Your command didn't use it, so it doesn't count for that yet.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
       solution: c.solution,
+      solutionLabel: this.kind === "predict" ? "The command:" : "One way to solve it:",
     });
   }
 
@@ -507,7 +608,7 @@ class GrepGameEngine {
     });
   }
 
-  showModal({ title, text, items = [], note = "", solution = null }) {
+  showModal({ title, text, items = [], note = "", solution = null, solutionLabel = "One way to solve it:" }) {
     document.getElementById("success-title").textContent = title;
     document.getElementById("success-points").textContent = text;
     const list = document.getElementById("success-skills");
@@ -519,6 +620,7 @@ class GrepGameEngine {
     }
     document.getElementById("success-note").textContent = note;
     document.getElementById("success-solution-block").hidden = !solution;
+    document.getElementById("success-solution-label").textContent = solutionLabel;
     document.getElementById("success-solution").textContent = solution || "";
     document.getElementById("success-modal").classList.add("active");
     // Release focus so Enter/Escape reach the global handler and close the modal.
@@ -538,6 +640,10 @@ class GrepGameEngine {
       this.addOutput("No hints in the placement test. Press \"I don't know →\" to stop here.", "warning");
       return;
     }
+    if (this.kind === "predict") {
+      this.eliminateChoice();
+      return;
+    }
     const { hints } = this.challenge;
     if (this.attempt.hintsUsed >= hints.length) {
       this.addOutput("No more hints. Try Show Solution.", "warning");
@@ -554,8 +660,31 @@ class GrepGameEngine {
       return;
     }
     this.attempt.solutionShown = true;
-    this.addOutput(`💡 Solution: ${this.challenge.solution}`, "info");
-    this.addOutput("Type it in yourself to finish the challenge.", "info");
+    if (this.kind === "predict") {
+      const answer = this.challenge.choices.findIndex((choice) => choice.correct) + 1;
+      this.addOutput(`💡 The answer is ${answer}. Pick it to continue.`, "info");
+      this.renderChoices();
+    } else {
+      this.addOutput(`💡 Solution: ${this.challenge.solution}`, "info");
+      this.addOutput("Type it in yourself to finish the challenge.", "info");
+    }
+    this.updateUI();
+  }
+
+  // A predict challenge's hint: rule out one wrong answer, and say why.
+  eliminateChoice() {
+    const left = this.challenge.choices
+      .map((choice, i) => i)
+      .filter((i) => !this.challenge.choices[i].correct && !this.attempt.eliminated.includes(i));
+    if (left.length <= 1) {
+      this.addOutput("No more hints. Try Show Solution.", "warning");
+      return;
+    }
+    const index = left[Math.floor(Math.random() * left.length)];
+    this.attempt.eliminated.push(index);
+    this.attempt.hintsUsed++;
+    this.addOutput(`💡 It's not ${index + 1}. ${this.challenge.choices[index].why}`, "info");
+    this.renderChoices();
     this.updateUI();
   }
 

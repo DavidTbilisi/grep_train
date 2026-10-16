@@ -1,19 +1,17 @@
 {
   "name": "grep-master",
   "version": "1.0.0",
-  "description": "Interactive grep learning game with beautiful terminal aesthetics",
+  "description": "Adaptive game for learning grep and log analysis tools in a simulated terminal",
   "main": "index.html",
   "type": "module",
   "scripts": {
     "start": "python -m http.server 8000",
-    "build": "echo 'No build process needed for vanilla HTML/CSS/JS'",
-    "deploy": "gh-pages -d .",
-    "lint": "eslint js/*.js",
+    "lint": "eslint js tests eslint.config.js",
     "test": "node --test \"tests/*.test.mjs\""
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/grep-master.git"
+    "url": "git+https://github.com/DavidTbilisi/grep_train.git"
   },
   "keywords": [
     "grep",
@@ -26,15 +24,15 @@
     "interactive",
     "tutorial"
   ],
-  "author": "Your Name <your-email@example.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/your-username/grep-master/issues"
+    "url": "https://github.com/DavidTbilisi/grep_train/issues"
   },
-  "homepage": "https://your-username.github.io/grep-master",
+  "homepage": "https://davidtbilisi.github.io/grep_train/",
   "devDependencies": {
-    "eslint": "^8.0.0",
-    "gh-pages": "^4.0.0"
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0"
   },
   "engines": {
     "node": ">=21.0.0"

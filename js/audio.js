@@ -32,7 +32,7 @@ export function playClickSound() {
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.1);
-  } catch (e) {
+  } catch {
     console.log("Click sound (audio not supported)");
   }
 }
@@ -61,7 +61,7 @@ export function playCommandSound() {
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.05);
-  } catch (e) {
+  } catch {
     console.log("Command sound (audio not supported)");
   }
 }
@@ -97,7 +97,7 @@ export function playSuccessSound() {
       oscillator.start(audioContext.currentTime + index * 0.1);
       oscillator.stop(audioContext.currentTime + index * 0.1 + 0.2);
     });
-  } catch (e) {
+  } catch {
     console.log("Success sound (audio not supported)");
   }
 }
@@ -126,7 +126,7 @@ export function playErrorSound() {
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
-  } catch (e) {
+  } catch {
     console.log("Error sound (audio not supported)");
   }
 }
