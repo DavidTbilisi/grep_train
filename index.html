@@ -57,6 +57,10 @@
                             <span class="prompt">$</span> <span id="placement-label">placement-test</span>
                             <span class="menu-hint">skip what you know</span>
                         </button>
+                        <button class="terminal-button" data-action="incidents">
+                            <span class="prompt">$</span> incidents
+                            <span class="menu-hint">investigate an outage</span>
+                        </button>
                         <button class="terminal-button" data-action="skills">
                             <span class="prompt">$</span> skills
                         </button>
@@ -75,6 +79,10 @@
             <div id="game-screen" class="screen">
                 <div class="challenge-header">
                     <div class="challenge-info">
+                        <div id="incident-notes" class="incident-notes" hidden>
+                            <p id="incident-intro"></p>
+                            <ul id="incident-findings"></ul>
+                        </div>
                         <p id="challenge-level" class="challenge-level"></p>
                         <h2 id="challenge-title"></h2>
                         <p id="challenge-description"></p>
@@ -189,6 +197,18 @@
                         <div class="code-example"><code>grep ERROR app.log | wc -l</code></div>
                         <div class="code-example"><code>awk '{print $2}' access.log | sort | uniq -c | sort -rn | head -n 3</code></div>
                     </div>
+                    <button class="terminal-button" data-action="menu">Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- Incidents Screen -->
+            <div id="incidents-screen" class="screen">
+                <div class="tutorial-content">
+                    <h2>Incidents</h2>
+                    <p class="skills-intro">Each incident is a short investigation of a generated outage: a few
+                        questions in a row, where each answer leads to the next. Your findings collect in the case
+                        notes as you go. Every play generates new logs.</p>
+                    <div id="incidents-content"></div>
                     <button class="terminal-button" data-action="menu">Back to Menu</button>
                 </div>
             </div>

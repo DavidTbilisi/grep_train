@@ -43,6 +43,8 @@ const ACTIONS = {
   course: () => showTransition(() => game.startCourse()),
   placement: () => showTransition(() => game.startPlacement()),
   skills: () => goTo("skills-screen", () => game.renderSkills()),
+  incidents: () => goTo("incidents-screen", () => game.renderIncidents()),
+  incident: (button) => showTransition(() => game.startIncident(button.dataset.scenario)),
   "practice-skill": (button) => showTransition(() => game.startPractice(button.dataset.skill)),
   tutorial: () => goTo("tutorial-screen", animateTutorialContent),
   settings: () => goTo("settings-screen", () => {

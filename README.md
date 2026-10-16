@@ -13,6 +13,7 @@ From the menu, pick a mode:
 
 - **practice**: endless generated challenges, chosen for you (see below)
 - **course**: the 16 hand-written challenges, in order
+- **incidents**: investigate a generated outage step by step: a break-in, a slow checkout, a crash flood, a bandwidth hog. Each answer leads to the next, findings collect in the case notes, and every play has new logs. The screen suggests the next case you have the skills for.
 - **placement-test**: 8 questions without hints; each one you pass marks its skills as known so practice skips ahead
 - **skills**: your skill map, with mastery, review dates, your most common mistakes, and a button to practise any skill
 
@@ -92,6 +93,8 @@ js/
 ├── generator.js        # Seeded log generator + challenge templates per skill
 ├── variants.js         # Fix-the-command and predict-the-output challenges, built from realistic mistakes
 ├── diagnose.js         # Answer checking and wrong-answer diagnosis
+├── incidents.js        # Incident scenarios: story, generated logs with the incident injected, steps
+├── incident-list.js    # Incidents screen
 ├── skill-map.js        # Skill map screen
 ├── command-autocomplete.js
 ├── settings.js         # Sound + theme

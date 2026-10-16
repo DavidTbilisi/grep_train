@@ -6,6 +6,7 @@
 //              and kind: write a command, fix a broken one, or predict an output
 //   placement  a short test; each pass grants the skills used, so experienced
 //              players skip what they already know
+//   incident   a multi-step investigation of a generated outage (incidents.js)
 
 import { FILES, LEVELS, ASCII_ART } from "./game-data.js";
 import { runCommandLine } from "./shell.js";
@@ -27,6 +28,8 @@ import { generatePlacement, PLACEMENT_STEPS } from "./generator.js";
 import { generateVariant } from "./variants.js";
 import { checkOutput } from "./diagnose.js";
 import { renderSkillMap } from "./skill-map.js";
+import { SCENARIOS, buildIncident } from "./incidents.js";
+import { renderIncidentList } from "./incident-list.js";
 import { playSuccessSound } from "./audio.js";
 import { showScreen } from "./ui.js";
 
@@ -99,6 +102,7 @@ class GrepGameEngine {
     this.focus = null; // a skill the player chose on the skill map
     this.recent = []; // skills of the latest practice challenges
     this.placement = null; // { step, granted, finished }
+    this.incident = null; // { data, step, points, notes, finished }
     this.gameStarted = false;
     this.history = [];
     this.historyPos = 0;
@@ -168,12 +172,18 @@ class GrepGameEngine {
     const parts = [`${masteredCount(this.learner)}/${SKILLS.length} skills mastered`];
     if (due) parts.push(`${due} review${due === 1 ? "" : "s"} due`);
     if (solved) parts.push(`course ${solved}/${CHALLENGES.length}`);
+    const incidents = Object.keys(this.learner.incidents).length;
+    if (incidents) parts.push(`${incidents}/${SCENARIOS.length} incidents solved`);
     if (this.score) parts.push(`${this.score} points`);
     document.getElementById("menu-progress").textContent = parts.join(" · ");
   }
 
   renderSkills() {
     renderSkillMap(document.getElementById("skills-content"), this.learner);
+  }
+
+  renderIncidents() {
+    renderIncidentList(document.getElementById("incidents-content"), this.learner);
   }
 
   // ---------- Starting and stopping ----------
@@ -198,6 +208,42 @@ class GrepGameEngine {
     this.placement = { step: 0, granted: [], finished: false };
     this.enterGame();
     this.loadPlacementStep();
+  }
+
+  startIncident(id) {
+    this.mode = "incident";
+    this.incident = { data: buildIncident(id, randomSeed()), step: 0, points: 0, notes: [], finished: false };
+    this.enterGame();
+    this.loadIncidentStep();
+  }
+
+  loadIncidentStep() {
+    this.setChallenge(this.incident.data.steps[this.incident.step]);
+  }
+
+  // Record what the step found (so later steps can build on it), then move on.
+  advanceIncident({ skipped = false } = {}) {
+    const inc = this.incident;
+    inc.notes.push(skipped ? `${this.challenge.note} (skipped)` : this.challenge.note);
+    inc.step++;
+    if (inc.step >= inc.data.steps.length) this.finishIncident();
+    else this.loadIncidentStep();
+  }
+
+  finishIncident() {
+    const inc = this.incident;
+    const { id, title, steps, outro } = inc.data;
+    const record = this.learner.incidents[id] || { completed: 0, best: 0 };
+    this.learner.incidents[id] = { completed: record.completed + 1, best: Math.max(record.best, inc.points) };
+    inc.finished = true;
+    this.save();
+    this.showModal({
+      title: `📁 Case closed: ${title}`,
+      text: `${inc.points} of ${steps.length * POINTS} points`,
+      items: inc.notes,
+      note: outro,
+      solution: null,
+    });
   }
 
   enterGame() {
@@ -244,6 +290,9 @@ class GrepGameEngine {
   skip() {
     if (this.mode === "placement") {
       this.finishPlacement();
+    } else if (this.mode === "incident") {
+      this.giveUp();
+      this.advanceIncident({ skipped: true });
     } else if (this.mode === "practice") {
       const tried = this.giveUp();
       this.nextPractice({ avoid: tried ? null : this.challenge.skill });
@@ -284,6 +333,15 @@ class GrepGameEngine {
       }
     } else if (this.mode === "practice") {
       this.nextPractice();
+    } else if (this.mode === "incident") {
+      if (this.incident.finished) {
+        this.gameStarted = false;
+        this.updateMenu();
+        showScreen("incidents-screen");
+        this.renderIncidents();
+      } else {
+        this.advanceIncident();
+      }
     } else if (this.courseIndex < CHALLENGES.length - 1) {
       this.loadCourse(this.courseIndex + 1);
     } else {
@@ -308,6 +366,10 @@ class GrepGameEngine {
     } else if (placement) {
       title = `Question ${this.placement.step + 1}/${PLACEMENT_STEPS}: ${c.title}`;
       context = "Placement test: no hints. Press \"I don't know\" to stop here.";
+    } else if (this.mode === "incident") {
+      const { data, step } = this.incident;
+      title = `${step + 1}. ${c.title}`;
+      context = `Incident: ${data.title} · step ${step + 1} of ${data.steps.length}`;
     } else {
       const from = this.pick.from && SKILL_BY_ID[this.pick.from];
       context = REASONS[this.pick.reason](SKILL_BY_ID[this.pick.skill], from);
@@ -322,6 +384,7 @@ class GrepGameEngine {
 
     document.getElementById("challenge-title").textContent = title;
     document.getElementById("challenge-level").textContent = context;
+    this.renderIncidentNotes();
     document.getElementById("challenge-description").textContent = description;
     const shown = document.getElementById("challenge-command");
     shown.hidden = this.kind === "write";
@@ -347,6 +410,21 @@ class GrepGameEngine {
       ? `Type 1-${c.choices.length}, or click a choice`
       : "e.g. grep ERROR app.log | wc -l   (Tab completes, ↑ history)";
     input.focus();
+  }
+
+  // Incident mode: the story so far, and what earlier steps found.
+  renderIncidentNotes() {
+    const box = document.getElementById("incident-notes");
+    box.hidden = this.mode !== "incident";
+    if (box.hidden) return;
+    document.getElementById("incident-intro").textContent = this.incident.data.intro;
+    const findings = document.getElementById("incident-findings");
+    findings.innerHTML = "";
+    for (const note of this.incident.notes) {
+      const li = document.createElement("li");
+      li.textContent = note;
+      findings.appendChild(li);
+    }
   }
 
   // The answer choices of a predict challenge.
@@ -433,6 +511,7 @@ class GrepGameEngine {
     let progress;
     if (course) progress = `Challenge ${this.courseIndex + 1}/${CHALLENGES.length}`;
     else if (placement) progress = `Question ${this.placement.step + 1}/${PLACEMENT_STEPS}`;
+    else if (this.mode === "incident") progress = `Step ${this.incident.step + 1}/${this.incident.data.steps.length}`;
     else progress = `${SKILL_BY_ID[c.skill].name}: ${percent(skillState(this.learner, c.skill).mastery)} mastered`;
     document.getElementById("challenge-progress").textContent = progress;
 
@@ -442,7 +521,7 @@ class GrepGameEngine {
 
     document.getElementById("btn-prev").disabled = !course || this.courseIndex === 0;
     const next = document.getElementById("btn-next");
-    next.textContent = placement ? "I don't know →" : "Skip →";
+    next.textContent = placement ? "I don't know →" : this.mode === "incident" ? "Skip step →" : "Skip →";
     next.disabled = course && this.courseIndex === CHALLENGES.length - 1;
     document.getElementById("btn-hint").disabled = placement;
     document.getElementById("btn-solution").disabled = placement;
@@ -543,6 +622,7 @@ class GrepGameEngine {
       const earned = this.pointsAvailable;
       this.learner.practice.points += earned;
       this.learner.practice.solved++;
+      if (this.mode === "incident") this.incident.points += earned;
       pointsText = `+${earned} points (total ${this.score})`;
     }
     this.save();
@@ -551,7 +631,7 @@ class GrepGameEngine {
 
     const unused = score > 0 && !predict ? c.skills.filter((id) => !used.includes(id)) : [];
     const isLastCourse = this.mode === "course" && this.courseIndex === CHALLENGES.length - 1;
-    let title = "🎉 Challenge complete!";
+    let title = this.mode === "incident" ? `🔎 Found it: ${c.note}` : "🎉 Challenge complete!";
     if (changes.some((change) => change.newlyMastered)) title = "⭐ Skill mastered!";
     if (isLastCourse) title = "🏆 You finished every challenge!";
 

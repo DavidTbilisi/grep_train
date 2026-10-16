@@ -1034,3 +1034,6 @@ function generatePlacement(step, seed) {
 const PLACEMENT_STEPS = PLACEMENT.length;
 
 export { generateChallenge, generatePlacement, generateLogs, makeRng, PLACEMENT_STEPS, TEMPLATES };
+
+// Building blocks for the incident scenarios (incidents.js).
+export { pad, clock, bytesFor, clearTop, IPS, APP_MESSAGES, TRACES };

@@ -28,6 +28,7 @@ function newLearner() {
     practice: { solved: 0, points: 0 },
     mistakes: {}, // diagnosis kind -> count
     placementDone: false,
+    incidents: {}, // scenario id -> { completed, best }
   };
 }
 
@@ -146,6 +147,7 @@ function loadLearner(storage, courseSkills = [], now = Date.now()) {
         course: { ...learner.course, ...saved.course },
         practice: { ...learner.practice, ...saved.practice },
         mistakes: { ...saved.mistakes },
+        incidents: { ...saved.incidents },
         version: learner.version,
       };
     }

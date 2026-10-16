@@ -16,7 +16,7 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 
 ## Architecture
 
-**Grep Master** is a browser-based game teaching `grep` and log analysis tools (head, tail, wc, sort, uniq, cut, awk, and pipes). There is no timer, no lives, and no game over. Hints cost points. Three modes: **course** (16 hand-written challenges across 5 levels), **practice** (adaptive: generated challenges picked per learner), and **placement** (a no-hints test that grants skills). No backend: everything runs in the browser and the learner model is saved in localStorage (`grepMasterLearner`, which migrates the old `grepMasterProgress` key).
+**Grep Master** is a browser-based game teaching `grep` and log analysis tools (head, tail, wc, sort, uniq, cut, awk, and pipes). There is no timer, no lives, and no game over. Hints cost points. Three modes: **course** (16 hand-written challenges across 5 levels), **practice** (adaptive: generated challenges picked per learner), **placement** (a no-hints test that grants skills), and **incidents** (multi-step investigations of a generated outage). No backend: everything runs in the browser and the learner model is saved in localStorage (`grepMasterLearner`, which migrates the old `grepMasterProgress` key).
 
 ### Module Responsibilities
 
@@ -31,6 +31,8 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 | `js/generator.js` | `generateChallenge`, `generatePlacement`, `TEMPLATES` | Pure. Seeded generator for app.log, access.log, and error.log (stack traces), and per-skill challenge templates (difficulty 1-3) |
 | `js/variants.js` | `generateVariant`, `MUTATIONS`, `makeFix`, `makePredict` | Pure. Realistic mistakes applied to a solution; turn a generated challenge into "fix" (broken command to repair) or "predict" (multiple choice; wrong choices are mutants' outputs). Falls back to "write" |
 | `js/diagnose.js` | `checkOutput`, `diagnose` | Pure. Answer comparison and wrong-answer diagnosis (kind, message, skill) |
+| `js/incidents.js` | `SCENARIOS`, `buildIncident`, `scenarioSkills` | Pure. Scenarios: `build(r)` generates logs with the incident injected and returns the facts; each step's `make(facts)` returns question, solution, hints, and a `note` for the case notes. Steps are write challenges, so results feed the learner model |
+| `js/incident-list.js` | `renderIncidentList`, `missingSkills` | Incidents screen: readiness per scenario and a suggestion |
 | `js/skill-map.js` | `renderSkillMap` | Skill map screen |
 | `js/game-engine.js` | `GrepGameEngine`, `CHALLENGES` | Course/practice/placement flow, scoring, feeding results into the learner model, command history |
 | `js/command-autocomplete.js` | `attachCommandAutocomplete` | Tab completion for commands (also after `\|`), per-tool flags, and file names |

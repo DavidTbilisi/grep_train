@@ -383,6 +383,8 @@ body::before {
   border-radius: 6px;
   display: flex;
   flex-direction: column;
+  /* Let long logs scroll inside the viewer instead of growing past it. */
+  min-height: 0;
 }
 
 .file-header {
@@ -398,6 +400,7 @@ body::before {
 
 .file-viewer {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 15px;
 }
@@ -883,6 +886,87 @@ body::before {
 .choice.right {
   border-color: #6bcf7f;
   box-shadow: 0 0 12px rgba(107, 207, 127, 0.4);
+}
+
+/* Incidents */
+.incident-notes {
+  margin-bottom: 15px;
+  padding: 12px 14px;
+  background: rgba(255, 217, 61, 0.06);
+  border-left: 3px solid #ffd93d;
+  font-size: 13px;
+}
+
+.challenge-info .incident-notes p {
+  margin-bottom: 6px;
+  color: #e0e0e0;
+}
+
+.incident-notes ul {
+  margin-left: 18px;
+  color: #ffd93d;
+}
+
+.incident-notes ul:empty {
+  display: none;
+}
+
+.incident-card {
+  margin: 12px 0;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.incident-card.suggested {
+  border-color: #ffd93d;
+}
+
+.incident-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.incident-head h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.incident-badge {
+  padding: 2px 8px;
+  border: 1px solid #ffd93d;
+  border-radius: 10px;
+  color: #ffd93d;
+  font-size: 11px;
+}
+
+.incident-badge.done {
+  border-color: #6bcf7f;
+  color: #6bcf7f;
+}
+
+.incident-teaser {
+  margin: 8px 0 4px;
+  color: #cccccc;
+}
+
+.incident-skills {
+  font-size: 12px;
+  color: #999999;
+}
+
+.incident-skills.missing {
+  color: #ffaa00;
+}
+
+.terminal-button.incident-start {
+  margin-top: 10px;
+  min-width: 0;
+  padding: 6px 14px;
+  font-size: 12px;
 }
 
 /* Skill Map */
