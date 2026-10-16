@@ -253,12 +253,27 @@
 
                         <div class="setting-item">
                             <label>Progress:</label>
-                            <div class="setting-control">
+                            <div class="setting-control progress-controls">
+                                <button class="terminal-button secondary" data-action="export-file">Export file</button>
+                                <button class="terminal-button secondary" data-action="import-file">Import file</button>
+                                <button class="terminal-button secondary" data-action="copy-code">Copy code</button>
                                 <button class="terminal-button secondary" data-action="reset-progress">Reset
                                     progress</button>
-                                <span class="setting-description">Forget course progress, skills, and points</span>
+                                <input type="file" id="import-file" accept=".json,application/json" hidden>
                             </div>
                         </div>
+
+                        <div class="setting-item">
+                            <label for="progress-code">Progress code:</label>
+                            <div class="setting-control progress-code-control">
+                                <textarea id="progress-code" class="progress-code" rows="3" spellcheck="false"
+                                    placeholder="Press Copy code to get a code for this browser, or paste a code from another device here."></textarea>
+                                <button class="terminal-button secondary" data-action="import-code">Import code</button>
+                            </div>
+                        </div>
+                        <p class="setting-description">Your progress lives in this browser only. Export a file or copy a
+                            code to move it to another device; importing replaces the progress here.</p>
+                        <p id="progress-status" class="progress-status" role="status"></p>
                     </div>
 
                     <div class="settings-actions">

@@ -7,6 +7,7 @@ import { showScreen, showTransition, hideLoading } from "./ui.js";
 import { playClickSound, playCommandSound } from "./audio.js";
 import { animateTutorialContent, animateSettingsContent } from "./animations.js";
 import { attachCommandAutocomplete } from "./command-autocomplete.js";
+import { setupProgressTransfer, setProgressStatus } from "./progress-ui.js";
 
 let game;
 
@@ -49,6 +50,7 @@ const ACTIONS = {
   tutorial: () => goTo("tutorial-screen", animateTutorialContent),
   settings: () => goTo("settings-screen", () => {
     updateSettingsUI();
+    setProgressStatus("");
     animateSettingsContent();
   }),
   menu: backToMenu,
@@ -64,6 +66,7 @@ const ACTIONS = {
   "reset-progress": () => {
     if (confirm("Reset all progress: course, skills, and practice?")) {
       game.resetProgress();
+      setProgressStatus("Progress reset.", "ok");
     }
   },
 };
@@ -73,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   terminalEffects.init();
   game = new GrepGameEngine();
   game.init();
+  Object.assign(ACTIONS, setupProgressTransfer(() => game));
   const commandInput = document.getElementById("command-input");
   attachCommandAutocomplete(commandInput, () => game);
   commandInput.addEventListener("keydown", (e) => {

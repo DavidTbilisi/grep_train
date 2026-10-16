@@ -969,6 +969,51 @@ body::before {
   font-size: 12px;
 }
 
+/* Settings: progress export / import */
+.progress-controls {
+  flex-wrap: wrap;
+}
+
+.progress-controls .terminal-button,
+.progress-code-control .terminal-button {
+  min-width: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.progress-code-control {
+  flex: 1;
+  align-items: flex-start;
+}
+
+.progress-code {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--secondary-color);
+  border-radius: 4px;
+  color: var(--primary-color);
+  font-family: inherit;
+  font-size: 12px;
+  word-break: break-all;
+  resize: vertical;
+}
+
+.progress-status {
+  min-height: 1.4em;
+  font-size: 13px;
+  color: #cccccc;
+}
+
+.progress-status.ok {
+  color: #6bcf7f;
+}
+
+.progress-status.error {
+  color: #ff6b6b;
+}
+
 /* Skill Map */
 .skills-intro {
   font-size: 13px;

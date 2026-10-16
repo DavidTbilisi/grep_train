@@ -24,7 +24,7 @@ Then:
 3. Type a command and press Enter. Any command that prints the right output wins.
 4. Stuck? Open **Show expected output**, take a 💡 hint (−25 points), or reveal the solution (0 points).
 
-Your progress is saved in the browser.
+Your progress is saved in the browser. To move it to another device, open **settings**: *Export file* saves a `.json` file and *Copy code* gives a short text code; *Import file* / *Import code* load either one (replacing the progress there, after a confirmation).
 
 ## 🧠 How Practice Adapts
 
@@ -96,6 +96,8 @@ js/
 ├── incidents.js        # Incident scenarios: story, generated logs with the incident injected, steps
 ├── incident-list.js    # Incidents screen
 ├── skill-map.js        # Skill map screen
+├── progress-io.js      # Export/import format: files, codes, validation
+├── progress-ui.js      # Settings buttons for export/import
 ├── command-autocomplete.js
 ├── settings.js         # Sound + theme
 ├── terminal-effects.js # Matrix rain, typing, scanline

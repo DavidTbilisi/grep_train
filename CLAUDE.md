@@ -34,6 +34,8 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 | `js/incidents.js` | `SCENARIOS`, `buildIncident`, `scenarioSkills` | Pure. Scenarios: `build(r)` generates logs with the incident injected and returns the facts; each step's `make(facts)` returns question, solution, hints, and a `note` for the case notes. Steps are write challenges, so results feed the learner model |
 | `js/incident-list.js` | `renderIncidentList`, `missingSkills` | Incidents screen: readiness per scenario and a suggestion |
 | `js/skill-map.js` | `renderSkillMap` | Skill map screen |
+| `js/progress-io.js` | `serialize`, `parseProgress`, `encodeCode`, `decodeCode`, `cleanLearner` | Pure. Progress files (`{app, format, exportedAt, learner}`) and codes (`GM1:` + base64url of deflate-raw JSON; `GM1p:` uncompressed fallback). Imports are validated field by field; unknown data is dropped |
+| `js/progress-ui.js` | `setupProgressTransfer` | Settings export/import buttons (download, file picker, clipboard with a fallback) |
 | `js/game-engine.js` | `GrepGameEngine`, `CHALLENGES` | Course/practice/placement flow, scoring, feeding results into the learner model, command history |
 | `js/command-autocomplete.js` | `attachCommandAutocomplete` | Tab completion for commands (also after `\|`), per-tool flags, and file names |
 | `js/settings.js` | `gameSettings`, `loadSettings`, `setSound`, `setTheme`, ... | Sound + theme, auto-saved to localStorage |

@@ -155,9 +155,16 @@ class GrepGameEngine {
   }
 
   resetProgress() {
-    this.learner = newLearner();
+    this.replaceLearner(newLearner());
+  }
+
+  // Swap in other progress (a reset, or an import) and forget the session's state.
+  replaceLearner(learner) {
+    this.learner = learner;
+    this.mode = "course";
     this.challenge = null;
     this.recent = [];
+    this.focus = null;
     this.save();
     this.updateMenu();
   }
