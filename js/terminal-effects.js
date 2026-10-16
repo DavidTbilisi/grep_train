@@ -1,4 +1,4 @@
-// Terminal Effects - Typing animations and visual effects
+// Terminal Effects - typing animation, matrix rain, scanline, and input feedback
 
 class TerminalEffects {
   constructor() {
@@ -12,7 +12,6 @@ class TerminalEffects {
     this.initTypingAnimations();
     this.initMatrixEffect();
     this.initScanlineEffect();
-    this.initGlitchEffects();
   }
 
   // Initialize typing animations for text elements
@@ -73,55 +72,6 @@ class TerminalEffects {
         }, this.cursorBlinkSpeed);
       }
     }, this.typingSpeed);
-  }
-
-  // Command prompt typing effect
-  typeCommand(input, command, callback) {
-    input.value = "";
-    input.focus();
-
-    let i = 0;
-    const typeInterval = setInterval(() => {
-      if (i < command.length) {
-        input.value = command.substring(0, i + 1);
-        i++;
-      } else {
-        clearInterval(typeInterval);
-        if (callback) callback();
-      }
-    }, this.typingSpeed);
-  }
-
-  // Terminal output animation
-  animateOutput(container, lines, callback) {
-    container.innerHTML = "";
-
-    let lineIndex = 0;
-    const addLine = () => {
-      if (lineIndex < lines.length) {
-        const line = document.createElement("div");
-        line.className = "output-line";
-        line.textContent = lines[lineIndex];
-        line.style.opacity = "0";
-        line.style.transform = "translateX(-20px)";
-
-        container.appendChild(line);
-
-        // Animate in
-        setTimeout(() => {
-          line.style.transition = "all 0.3s ease";
-          line.style.opacity = "1";
-          line.style.transform = "translateX(0)";
-        }, 50);
-
-        lineIndex++;
-        setTimeout(addLine, 100);
-      } else {
-        if (callback) callback();
-      }
-    };
-
-    addLine();
   }
 
   // Matrix-style background effect
@@ -216,145 +166,6 @@ class TerminalEffects {
     document.body.appendChild(scanline);
   }
 
-  // Glitch effects for special moments
-  initGlitchEffects() {
-    if (!document.querySelector("#glitch-style")) {
-      const style = document.createElement("style");
-      style.id = "glitch-style";
-      style.textContent = `
-                .glitch {
-                    animation: glitch 0.3s linear infinite;
-                }
-                
-                @keyframes glitch {
-                    0% { transform: translate(0); }
-                    20% { transform: translate(-2px, 2px); }
-                    40% { transform: translate(-2px, -2px); }
-                    60% { transform: translate(2px, 2px); }
-                    80% { transform: translate(2px, -2px); }
-                    100% { transform: translate(0); }
-                }
-                
-                .text-glitch {
-                    position: relative;
-                }
-                
-                .text-glitch::before,
-                .text-glitch::after {
-                    content: attr(data-text);
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                }
-                
-                .text-glitch::before {
-                    animation: glitch-1 0.5s linear infinite;
-                    color: #ff0040;
-                    z-index: -1;
-                }
-                
-                .text-glitch::after {
-                    animation: glitch-2 0.5s linear infinite;
-                    color: #00ffff;
-                    z-index: -2;
-                }
-                
-                @keyframes glitch-1 {
-                    0% { transform: translate(0); }
-                    20% { transform: translate(-2px, 2px); }
-                    40% { transform: translate(-2px, -2px); }
-                    60% { transform: translate(2px, 2px); }
-                    80% { transform: translate(2px, -2px); }
-                    100% { transform: translate(0); }
-                }
-                
-                @keyframes glitch-2 {
-                    0% { transform: translate(0); }
-                    20% { transform: translate(2px, -2px); }
-                    40% { transform: translate(2px, 2px); }
-                    60% { transform: translate(-2px, -2px); }
-                    80% { transform: translate(-2px, 2px); }
-                    100% { transform: translate(0); }
-                }
-            `;
-      document.head.appendChild(style);
-    }
-  }
-
-  // Apply glitch effect to element
-  glitchElement(element, duration = 1000) {
-    element.classList.add("glitch");
-    setTimeout(() => {
-      element.classList.remove("glitch");
-    }, duration);
-  }
-
-  // Text glitch effect
-  glitchText(element, text, duration = 2000) {
-    element.classList.add("text-glitch");
-    element.setAttribute("data-text", text);
-
-    setTimeout(() => {
-      element.classList.remove("text-glitch");
-      element.removeAttribute("data-text");
-    }, duration);
-  }
-
-  // Success particle effect
-  createSuccessParticles(container) {
-    const particles = [];
-    const particleCount = 30;
-
-    for (let i = 0; i < particleCount; i++) {
-      const particle = document.createElement("div");
-      particle.className = "success-particle";
-      particle.style.cssText = `
-                position: absolute;
-                width: 4px;
-                height: 4px;
-                background: #00ff41;
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 1000;
-            `;
-
-      const startX = Math.random() * container.offsetWidth;
-      const startY = Math.random() * container.offsetHeight;
-      const endX = startX + (Math.random() - 0.5) * 200;
-      const endY = startY - Math.random() * 100;
-
-      particle.style.left = startX + "px";
-      particle.style.top = startY + "px";
-
-      container.appendChild(particle);
-      particles.push(particle);
-
-      // Animate particle
-      particle.animate(
-        [
-          {
-            transform: "translate(0, 0) scale(1)",
-            opacity: 1,
-          },
-          {
-            transform: `translate(${endX - startX}px, ${
-              endY - startY
-            }px) scale(0)`,
-            opacity: 0,
-          },
-        ],
-        {
-          duration: 1000 + Math.random() * 500,
-          easing: "ease-out",
-        }
-      ).onfinish = () => {
-        particle.remove();
-      };
-    }
-  }
-
   // Error shake effect
   shakeElement(element, intensity = 10) {
     const originalTransform = element.style.transform;
@@ -375,76 +186,6 @@ class TerminalEffects {
     ).onfinish = () => {
       element.style.transform = originalTransform;
     };
-  }
-
-  // Terminal boot sequence
-  playBootSequence(callback) {
-    const bootMessages = [
-      "Initializing grep environment...",
-      "Loading command parser...",
-      "Mounting file systems...",
-      "Starting game engine...",
-      "Ready for grep mastery!",
-    ];
-
-    const container = document.createElement("div");
-    container.className = "boot-sequence";
-    container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Fira Code', monospace;
-            color: #00ff41;
-        `;
-
-    document.body.appendChild(container);
-
-    let messageIndex = 0;
-    const showMessage = () => {
-      if (messageIndex < bootMessages.length) {
-        const message = document.createElement("div");
-        message.textContent = bootMessages[messageIndex];
-        message.style.opacity = "0";
-        message.style.marginBottom = "10px";
-
-        container.appendChild(message);
-
-        // Fade in
-        message.animate(
-          [
-            { opacity: 0, transform: "translateY(20px)" },
-            { opacity: 1, transform: "translateY(0)" },
-          ],
-          {
-            duration: 500,
-            fill: "forwards",
-          }
-        );
-
-        messageIndex++;
-        setTimeout(showMessage, 800);
-      } else {
-        // Boot complete
-        setTimeout(() => {
-          container.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: 500,
-          }).onfinish = () => {
-            container.remove();
-            if (callback) callback();
-          };
-        }, 1000);
-      }
-    };
-
-    showMessage();
   }
 
   // Command highlight effect
@@ -471,33 +212,6 @@ class TerminalEffects {
     };
   }
 
-  // Progress bar animation
-  animateProgressBar(element, progress, duration = 1000) {
-    const progressBar = element.querySelector(".progress-fill") || element;
-
-    progressBar.animate([{ width: "0%" }, { width: `${progress}%` }], {
-      duration: duration,
-      fill: "forwards",
-      easing: "ease-out",
-    });
-  }
-
-  // Cleanup method
-  cleanup() {
-    this.activeTypingElements.clear();
-
-    // Remove matrix canvas
-    const matrixCanvas = document.getElementById("matrix-canvas");
-    if (matrixCanvas) {
-      matrixCanvas.remove();
-    }
-
-    // Remove scanline
-    const scanline = document.querySelector(".scanline");
-    if (scanline) {
-      scanline.remove();
-    }
-  }
 }
 
 export { TerminalEffects };

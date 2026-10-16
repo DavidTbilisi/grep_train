@@ -6,36 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run start   # Serve locally at http://localhost:8000 (python -m http.server 8000)
+npm test        # node tests/shell.test.mjs: compares js/shell.js against real bash + GNU coreutils (LC_ALL=C)
 npm run lint    # ESLint on js/*.js (ES6 modules)
 npm run deploy  # Deploy to GitHub Pages via gh-pages
 ```
 
-No build step — the project uses native ES6 modules (`type="module"`) in the browser.
+No build step. The project uses native ES6 modules (`type="module"`) in the browser.
 
 ## Architecture
 
-**Grep Master** is a browser-based game teaching the `grep` command through 15 progressive challenges across 5 levels. Code is organized as ES6 modules in `js/` directory, loaded via `<script type="module" src="js/main.js">`.
+**Grep Master** is a browser-based game teaching `grep` and log analysis tools (head, tail, wc, sort, uniq, cut, awk, and pipes) through 16 challenges across 5 levels. There is no timer, no lives, and no game over. Hints cost points, and progress is saved in localStorage.
 
 ### Module Responsibilities
 
 | Module | Exports | Role |
 |---|---|---|
-| `js/game-data.js` | `GAME_DATA` | 15 challenge definitions, levels, achievements, ASCII art |
-| `js/game-engine.js` | `GrepGameEngine` | State machine (score, lives, timer), command parsing, achievements |
-| `js/terminal-effects.js` | `TerminalEffects`, `terminalEffects` | Matrix rain, typing animations, Web Audio effects |
-| `js/ui.js` | `showScreen`, `showTransition`, `showLoading`, `hideLoading` | Screen/modal management |
-| `js/audio.js` | `playClickSound`, `playCommandSound`, `playSuccessSound`, `playErrorSound` | Sound effects with `soundEnabled` guard built-in |
-| `js/settings.js` | `gameSettings`, `loadSettings`, `saveSettings`, etc. | User preferences (lives, hints, theme, sound) stored in localStorage |
-| `js/animations.js` | Animation functions for Tutorial/About/Settings screens | Staggered fade-in animations with requestAnimationFrame |
-| `js/main.js` | Entry point | Boots app, wires event listeners, exposes functions to global scope for backward compatibility |
+| `js/shell.js` | `runCommandLine`, `TOOLS` | Pure (DOM-free) simulator: quote-aware parsing, pipes, globs, and the tools. Returns `{output}` or `{error}` |
+| `js/game-data.js` | `FILES`, `LEVELS`, `ASCII_ART` | Shared log files and challenge definitions (`solution`, `hints`, `learn`, `files`) |
+| `js/game-engine.js` | `GrepGameEngine`, `CHALLENGES` | Challenge flow, output checking, scoring, progress (`grepMasterProgress` key), command history |
+| `js/command-autocomplete.js` | `attachCommandAutocomplete` | Tab completion for commands (also after `\|`), per-tool flags, and file names |
+| `js/settings.js` | `gameSettings`, `loadSettings`, `setSound`, `setTheme`, ... | Sound + theme, auto-saved to localStorage |
+| `js/terminal-effects.js` | `terminalEffects` | Matrix rain, typing animation, scanline, shake/highlight |
+| `js/audio.js` | `play*Sound` | Web Audio effects that respect `gameSettings.soundEnabled` |
+| `js/ui.js`, `js/animations.js` | screen switching, transitions, staggered fade-ins | |
+| `js/main.js` | Entry point | Boots the app and dispatches every `data-action="..."` button through the `ACTIONS` map |
 
-### Data Flow
+### Key Conventions
 
-1. `index.html` loads `<script type="module" src="js/main.js">`
-2. `main.js` imports all modules and initializes: `terminalEffects.init()` → `new GrepGameEngine()` → `game.init()`
-3. User interactions trigger event listeners in `main.js` → call game methods → engine simulates grep, validates output
-4. Engine reads `GAME_DATA` for expected outputs; plays sounds via `audio.js` (respecting `gameSettings.soundEnabled`); saves progress to `settings.js`
-5. UI updates via `game-engine.js` → all modules share `gameSettings` object reference for reactive settings
+- A challenge's expected output is **computed** by running its `solution` through `shell.js`, so never hand-write expected output. Any command that prints the same output passes. The comparison ignores whitespace differences and treats `14 access.log` the same as `14`.
+- Buttons in `index.html` use `data-action` attributes, not inline `onclick`.
+- When you add a tool or flag to `shell.js`, add a case to `tests/shell.test.mjs` and run `npm test`.
 
 ### `grep_practice/` Directory
 

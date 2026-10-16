@@ -1,21 +1,9 @@
-// Tab completion for the in-game grep prompt (bash-style: Tab completes / cycles).
+// Tab completion for the in-game prompt (bash-style: Tab completes / cycles).
+// Completes command names (also right after a |), each tool's flags, and file names.
 
-const COMMAND = "grep";
+import { TOOLS } from "./shell.js";
 
-const GREP_FLAGS = [
-  "-A",
-  "-B",
-  "-C",
-  "-c",
-  "-E",
-  "-H",
-  "-i",
-  "-n",
-  "-o",
-  "-r",
-  "-v",
-  "-w",
-];
+const COMMANDS = [...Object.keys(TOOLS), "help", "clear"];
 
 function shellTokenizePrefix(prefix) {
   const tokens = [];
@@ -45,8 +33,14 @@ function shellTokenizePrefix(prefix) {
       continue;
     }
 
+    if (prefix[i] === "|") {
+      tokens.push("|");
+      i++;
+      continue;
+    }
+
     const start = i;
-    while (i < len && !/\s/.test(prefix[i])) i++;
+    while (i < len && !/[\s|]/.test(prefix[i])) i++;
     tokens.push(prefix.slice(start, i));
   }
 
@@ -87,7 +81,7 @@ function longestCommonPrefix(list) {
 
 function getWordAtCursor(value, cursor) {
   const before = value.slice(0, cursor);
-  const m = before.match(/(\S*)$/);
+  const m = before.match(/([^\s|]*)$/);
   const word = m ? m[1] : "";
   const wordStart = cursor - word.length;
   return { word, wordStart };
@@ -95,52 +89,21 @@ function getWordAtCursor(value, cursor) {
 
 function classifyCompletion(value, cursor) {
   const { word, wordStart } = getWordAtCursor(value, cursor);
-  const prefix = value.slice(0, wordStart);
-  const tokens = shellTokenizePrefix(prefix);
-
   if (inIncompleteQuotedWord(word)) {
     return { kind: "none", word, wordStart };
   }
 
-  if (tokens.length === 0) {
-    if (COMMAND.startsWith(word) && word.length < COMMAND.length) {
-      return { kind: "command", word, wordStart };
-    }
-    return { kind: "none", word, wordStart };
-  }
+  // Only the current pipeline stage matters: `grep x app.log | so<Tab>`
+  const tokens = shellTokenizePrefix(value.slice(0, wordStart));
+  const stage = tokens.slice(tokens.lastIndexOf("|") + 1);
 
-  if (tokens[0] !== COMMAND) {
-    if (tokens.length === 1 && COMMAND.startsWith(word) && word.length < COMMAND.length) {
-      return { kind: "command", word, wordStart };
-    }
-    return { kind: "none", word, wordStart };
+  if (stage.length === 0) {
+    return { kind: "command", word, wordStart };
   }
-
-  const afterGrep = tokens.slice(1);
-  let i = 0;
-  while (i < afterGrep.length && afterGrep[i].startsWith("-")) {
-    i++;
-  }
-  const rest = afterGrep.slice(i);
-
   if (word.startsWith("-")) {
-    return { kind: "flag", word, wordStart };
+    return { kind: "flag", command: stage[0], word, wordStart };
   }
-
-  if (rest.length >= 2) {
-    return { kind: "file", word, wordStart };
-  }
-
-  if (rest.length === 1) {
-    if (word === "") {
-      return { kind: "file", word, wordStart };
-    }
-    if (word !== rest[0]) {
-      return { kind: "file", word, wordStart };
-    }
-  }
-
-  return { kind: "none", word, wordStart };
+  return { kind: "file", word, wordStart };
 }
 
 function filterPrefix(list, prefix) {
@@ -176,13 +139,13 @@ export function attachCommandAutocomplete(input, getGame) {
 
     const value = input.value;
     const cursor = input.selectionStart ?? value.length;
-    const { kind, word, wordStart } = classifyCompletion(value, cursor);
+    const { kind, command, word, wordStart } = classifyCompletion(value, cursor);
 
     let candidates = [];
     if (kind === "command") {
-      candidates = [COMMAND];
+      candidates = filterPrefix(COMMANDS, word);
     } else if (kind === "flag") {
-      candidates = filterPrefix(GREP_FLAGS, word);
+      candidates = filterPrefix(TOOLS[command]?.flags ?? [], word);
     } else if (kind === "file" && game.currentFiles) {
       candidates = filterPrefix(Object.keys(game.currentFiles), word);
     }

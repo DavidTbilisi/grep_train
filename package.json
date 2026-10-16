@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "Interactive grep learning game with beautiful terminal aesthetics",
   "main": "index.html",
+  "type": "module",
   "scripts": {
     "start": "python -m http.server 8000",
     "build": "echo 'No build process needed for vanilla HTML/CSS/JS'",
     "deploy": "gh-pages -d .",
     "lint": "eslint js/*.js",
-    "test": "echo 'Tests coming soon'"
+    "test": "node tests/shell.test.mjs"
   },
   "repository": {
     "type": "git",
