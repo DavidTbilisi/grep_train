@@ -782,6 +782,13 @@ body::before {
   font-size: 13px;
 }
 
+.offline-status {
+  margin-top: 6px;
+  text-align: center;
+  color: #6c7a89;
+  font-size: 12px;
+}
+
 .success-stats p {
   margin: 8px 0;
   font-size: 16px;

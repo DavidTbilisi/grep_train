@@ -113,5 +113,28 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Offline play: sw.js caches the game (not on file:// pages, where it can't run).
+function updateOfflineStatus(saved) {
+  const status = document.getElementById("offline-status");
+  if (!navigator.onLine) status.textContent = "You're offline: playing from the saved copy.";
+  else status.textContent = saved ? "Saved for offline play." : "";
+}
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  let saved = false;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // No offline copy (private mode, blocked storage): the game still works online.
+    });
+    navigator.serviceWorker.ready.then(() => {
+      saved = true;
+      updateOfflineStatus(saved);
+    });
+    updateOfflineStatus(saved);
+  });
+  window.addEventListener("online", () => updateOfflineStatus(saved));
+  window.addEventListener("offline", () => updateOfflineStatus(saved));
+}
+
 // Debug handle for the browser console
 window.gameDebug = { game: () => game, effects: () => terminalEffects };

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "python -m http.server 8000",
-    "lint": "eslint js tests eslint.config.js",
+    "lint": "eslint js tests sw.js eslint.config.js",
     "test": "node --test \"tests/*.test.mjs\""
   },
   "repository": {

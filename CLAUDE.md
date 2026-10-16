@@ -48,6 +48,7 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 
 - A challenge's expected output is **computed** by running its `solution` through `shell.js`, so never hand-write expected output. Any command that prints the same output passes. The comparison ignores whitespace differences and treats `14 access.log` the same as `14`.
 - Buttons in `index.html` use `data-action` attributes, not inline `onclick`.
+- Offline play: `sw.js` precaches every file the game loads and serves network-first with a cache fallback. **When you add a file the game loads, add it to `PRECACHE` in `sw.js`**; `tests/offline.test.mjs` fails otherwise. Bump `CACHE` only to force old caches out.
 - When you add a tool or flag to `shell.js`, add a case to `tests/shell.test.mjs` and run `npm test`.
 - Skill credit comes from `detectSkills(command)`, so every challenge's (and template's) solution must use the skills it is tagged with. The tests enforce this.
 - Every skill has at least two templates per difficulty; the engine passes the previous challenge's template id as `avoid`, so the same template never comes twice in a row for a skill. Tests run every template individually (skills used, and vs real bash).

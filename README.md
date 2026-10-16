@@ -24,6 +24,8 @@ Then:
 3. Type a command and press Enter. Any command that prints the right output wins.
 4. Stuck? Open **Show expected output**, take a 💡 hint (−25 points), or reveal the solution (0 points).
 
+**Works offline:** after your first visit, the game is saved in the browser, so it loads and plays without a connection. Browsers that support it can also install it as an app.
+
 Your progress is saved in the browser. To move it to another device, open **settings**: *Export file* saves a `.json` file and *Copy code* gives a short text code; *Import file* / *Import code* load either one (replacing the progress there, after a confirmation).
 
 ## 🧠 How Practice Adapts
@@ -80,6 +82,8 @@ There's no build step. The game is plain HTML/CSS and native ES modules.
 
 ```
 index.html              # Screens: menu, game, cheat sheet, settings
+sw.js                   # Service worker for offline play (network first, cache fallback)
+manifest.webmanifest, icon.svg
 styles.css
 js/
 ├── main.js             # Entry point, wires data-action buttons and keyboard shortcuts

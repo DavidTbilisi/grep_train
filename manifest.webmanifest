@@ -1,0 +1,11 @@
+{
+  "name": "Grep Master",
+  "short_name": "Grep Master",
+  "description": "Learn grep and log analysis tools by typing real commands against real-looking logs.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a1a20",
+  "theme_color": "#0a1a20",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
