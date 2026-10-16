@@ -68,6 +68,34 @@ const commands = [
   "awk '{print $NF}' access.log | sort -n | tail -n 1",
   "awk '{print NF}' a.txt",
   "grep ERROR app.log | awk '{print $2}' | cut -d: -f3",
+  // awk as a language: totals, averages, arrays, printf, number formatting
+  "awk '{s += $6} END {print s}' access.log",
+  "awk '{s += $6} END {print s/NR}' access.log",
+  "awk '$5 == 200 {s += $6; n++} END {print s, n, s/n}' access.log",
+  "awk '$5 == 999 {n++} END {print n}' access.log",
+  "awk '$5 == 999 {n++} END {print n+0}' access.log",
+  "awk '$6 > max {max = $6} END {print max}' access.log",
+  "awk 'NR == 1 || $6 < min {min = $6} END {print min}' access.log",
+  "awk '{b[$2] += $6} END {for (ip in b) print ip, b[ip]}' access.log | sort",
+  "awk '{n[$5]++} END {for (s in n) print n[s], s}' access.log | sort -rn",
+  "awk '{s[$4] += $6; c[$4]++} END {for (p in s) print p, s[p]/c[p]}' access.log | sort",
+  "awk '/Slow query/ {s += $NF} END {print s}' app.log",
+  "awk '{printf \"%s has %d fields\\n\", $3, NF}' app.log",
+  "awk '{s += $6} END {printf \"%.1f %.2f %.0f %e %g\\n\", s/NR, s/7, 2.5, s, s/3}' access.log",
+  "awk 'BEGIN {printf \"%5d|%-5d|%05d|%x|%o|%c|%5.1f|%s\\n\", 42, 42, 42, 255, 8, 65, 3.14159, \"ok\"}'",
+  "awk 'BEGIN {print 1/3, 2/3, 100/3, 1e6/3, 1e7/3, 0.1+0.2, 123456.5, 4153.125, 0.000012345, -7/2}'",
+  "awk 'BEGIN {printf \"%.1f %.1f %.1f %.1f %.2f %.0f %.0f\\n\", 0.25, 0.35, 1234.25, 1234.75, 1.005, 0.5, 1.5}'",
+  "awk 'BEGIN {print length(\"hello\"), substr(\"hello\", 2, 3), index(\"hello\", \"l\"), toupper(\"a\") tolower(\"B\"), int(3.9), int(-3.9)}'",
+  "awk '{print length}' a.txt",
+  "awk 'BEGIN {FS = \",\"; OFS = \" | \"} NR > 1 {print $2, $3}' users.csv",
+  "awk -F, 'NR > 1 {print NR - 1 \": \" toupper($2)}' users.csv",
+  "awk '$5 == 404 {next} {n++} END {print n}' access.log",
+  "awk '{if ($6 > 5000) big++; else small++} END {print big, small}' access.log",
+  "awk '{x = ($5 >= 400) ? \"fail\" : \"ok\"; c[x]++} END {for (k in c) print k, c[k]}' access.log | sort",
+  "awk 'NR % 5 == 0 {print NR, $1}' access.log",
+  "awk '{print $NF - 1, $(NF-1), -$6}' access.log",
+  "awk '$3 ~ /^P/ && $5 !~ /^2/' access.log",
+  "awk '{i++; j += i} END {print i, j, i * j, j % 7, -i}' access.log",
 ];
 
 const dir = mkdtempSync(join(tmpdir(), "grep-master-test-"));
@@ -93,7 +121,10 @@ for (const cmd of [...new Set(commands)]) {
   }
 }
 
-const errorCases = ["foo app.log", "grep", "grep x nope.log", "grep x", "head -n x app.log", "grep 'unclosed app.log", "grep x app.log |"];
+const errorCases = [
+  "foo app.log", "grep", "grep x nope.log", "grep x", "head -n x app.log", "grep 'unclosed app.log", "grep x app.log |",
+  "awk '{print $1' app.log", "awk 'BEGIN {print 1/0}'", "awk '{print $1 > \"out\"}' app.log", "awk '{foo(1)}' app.log",
+];
 for (const cmd of errorCases) {
   if (!runCommandLine(cmd, files).error) {
     failures++;

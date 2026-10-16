@@ -686,6 +686,78 @@ const TEMPLATES = [
     };
   }),
 
+  // awk-sum
+  t(["awk-sum"], 1, () => ({
+    title: "Total traffic",
+    description: "How many bytes did the server send in total? Bytes are column 6 of access.log. Print just the number.",
+    files: ["access.log"],
+    solution: "awk '{s += $6} END {print s}' access.log",
+    hints: ["Add column 6 to a variable on every line: {s += $6}.", "Print it once, after the last line, in an END block.", "awk '{s += $6} END {print s}' access.log"],
+  })),
+  t(["awk-sum", "awk-filter"], 2, (r, logs) => {
+    const status = r.pick(presentStatuses(logs));
+    return {
+      title: `Bytes for ${status}s`,
+      description: `How many bytes did the responses with status ${status} add up to? Print just the number.`,
+      files: ["access.log"],
+      solution: `awk '$5 == ${status} {s += $6} END {print s}' access.log`,
+      hints: ["Only add up the lines that match a condition.", `Put $5 == ${status} before the { s += $6 } part.`, `awk '$5 == ${status} {s += $6} END {print s}' access.log`],
+    };
+  }),
+  t(["awk-sum", "awk-filter"], 3, () => ({
+    title: "Time lost to slow queries",
+    description: "What's the total time of all the slow queries in app.log, in ms? Print just the number. (awk reads 2300ms as the number 2300.)",
+    files: ["app.log"],
+    solution: "awk '/Slow query/ {s += $NF} END {print s}' app.log",
+    hints: ["Match the slow-query lines with /Slow query/.", "The duration is the last field, $NF.", "awk '/Slow query/ {s += $NF} END {print s}' app.log"],
+  })),
+
+  // awk-stats
+  t(["awk-stats"], 1, () => ({
+    title: "Biggest response",
+    description: "What's the largest response size in access.log (bytes, column 6)? Print just the number.",
+    files: ["access.log"],
+    solution: "awk '$6 > max {max = $6} END {print max}' access.log",
+    hints: ["Keep the biggest value seen so far in a variable.", "$6 > max {max = $6}, then print max at the END.", "awk '$6 > max {max = $6} END {print max}' access.log"],
+  })),
+  t(["awk-stats", "awk-sum"], 2, () => ({
+    title: "Average response",
+    description: "What's the average response size in bytes (column 6)? Print it the way awk's print shows numbers (like 4153.12).",
+    files: ["access.log"],
+    solution: "awk '{s += $6} END {print s/NR}' access.log",
+    hints: ["Average = total / number of lines.", "NR is the number of lines read so far; at the END, that's all of them.", "awk '{s += $6} END {print s/NR}' access.log"],
+  })),
+  t(["awk-stats", "awk-filter"], 3, () => ({
+    title: "Average slow query",
+    description: "What's the average duration of the slow queries in app.log, in ms, with exactly one decimal place (like 1234.5)?",
+    files: ["app.log"],
+    solution: "awk '/Slow query/ {s += $NF; n++} END {printf \"%.1f\\n\", s/n}' app.log",
+    hints: ["Add up $NF and count the slow-query lines: {s += $NF; n++}.", "printf \"%.1f\\n\" prints one decimal place. Divide by n, not NR.", "awk '/Slow query/ {s += $NF; n++} END {printf \"%.1f\\n\", s/n}' app.log"],
+  })),
+
+  // awk-group
+  t(["awk-group"], 1, () => ({
+    title: "Bytes per IP",
+    description: "How many bytes went to each IP address? Print each IP and its total, sorted by IP.",
+    files: ["access.log"],
+    solution: "awk '{b[$2] += $6} END {for (ip in b) print ip, b[ip]}' access.log | sort",
+    hints: ["Use an array keyed by the IP: b[$2] += $6.", "At the END, loop with for (ip in b), then pipe into sort.", "awk '{b[$2] += $6} END {for (ip in b) print ip, b[ip]}' access.log | sort"],
+  })),
+  t(["awk-group", "pipes"], 2, () => ({
+    title: "Heaviest paths",
+    description: "Total bytes per path, biggest first: print the total, then the path.",
+    files: ["access.log"],
+    solution: "awk '{b[$4] += $6} END {for (p in b) print b[p], p}' access.log | sort -rn",
+    hints: ["Key the array by the path, column 4.", "Print the total first so sort -rn can order by it.", "awk '{b[$4] += $6} END {for (p in b) print b[p], p}' access.log | sort -rn"],
+  })),
+  t(["awk-group", "awk-stats"], 3, () => ({
+    title: "Average size per path",
+    description: "What's the average response size for each path? Print each path and its average, sorted by path.",
+    files: ["access.log"],
+    solution: "awk '{s[$4] += $6; n[$4]++} END {for (p in s) print p, s[p]/n[p]}' access.log | sort",
+    hints: ["Keep two arrays keyed by path: a total and a count.", "At the END, print s[p]/n[p] for each path, then sort.", "awk '{s[$4] += $6; n[$4]++} END {for (p in s) print p, s[p]/n[p]}' access.log | sort"],
+  })),
+
   // regex-anchors
   t(["regex-anchors"], 1, (r, logs, run) => {
     const words = endingWords(logs, run);
@@ -894,6 +966,12 @@ const PLACEMENT = [
       solution: `${report} | head -n 1`,
     };
   }),
+  t(["awk-group", "awk-sum"], 3, () => ({
+    title: "Traffic per IP",
+    description: "How many bytes went to each IP address? Print each IP and its total, sorted by IP.",
+    files: ["access.log"],
+    solution: "awk '{b[$2] += $6} END {for (ip in b) print ip, b[ip]}' access.log | sort",
+  })),
   t(["grep-o", "regex-repeat", "regex-classes"], 3, () => ({
     title: "Just the numbers",
     description: "Print just the duration of each slow query in app.log (like 2300ms), one per line.",

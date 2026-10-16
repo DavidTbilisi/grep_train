@@ -193,6 +193,33 @@ const MUTATIONS = [
     explain: "The comparison is the wrong way round: == is equal, != not equal, > bigger, < smaller.",
   },
   {
+    kind: "running-total",
+    skill: "awk-sum",
+    apply: replace(/\} END \{/, "; "),
+    explain: "Without END, the print runs on every line, so you get a running total instead of one final number.",
+  },
+  {
+    kind: "assign-not-add",
+    skill: "awk-sum",
+    apply: replace(/ \+= /, " = "),
+    explain: "= replaces the value on every line; += adds to it.",
+  },
+  {
+    kind: "wrong-column",
+    skill: "awk-sum",
+    apply: (cmd) => {
+      const m = cmd.match(/\+= \$(\d)/);
+      return m ? cmd.replace(m[0], `+= $${m[1] === "6" ? 5 : Number(m[1]) + 1}`) : null;
+    },
+    explain: "That adds up the wrong column. Columns are counted from 1, split on spaces.",
+  },
+  {
+    kind: "nr-not-count",
+    skill: "awk-stats",
+    apply: replace(/\/n(?=[)}\s])/, "/NR"),
+    explain: "NR counts every line read, not just the ones that matched, so the average comes out too small.",
+  },
+  {
     kind: "quoting",
     skill: "grep-basic",
     apply: replace(/\bgrep ((?:-[A-Za-z]+ )?)'([^'|{]+ [^'|{]+)'/, "grep $1$2"),

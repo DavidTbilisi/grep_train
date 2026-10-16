@@ -173,6 +173,16 @@
                             <div class="option"><code>awk '$5 == 404'</code> <span>lines where column 5 is 404</span></div>
                         </div>
 
+                        <h3>awk totals</h3>
+                        <div class="options-list">
+                            <div class="option"><code>{s += $6} END {print s}</code> <span>add up a column, print the total once at the end</span></div>
+                            <div class="option"><code>END {print s/NR}</code> <span>average: NR is the number of lines</span></div>
+                            <div class="option"><code>$6 > max {max = $6}</code> <span>keep the biggest value seen</span></div>
+                            <div class="option"><code>{b[$2] += $6}</code> <span>a total per key (arrays)</span></div>
+                            <div class="option"><code>END {for (k in b) print k, b[k]}</code> <span>print every key and total (then <code>| sort</code>)</span></div>
+                            <div class="option"><code>printf "%.1f\n", x</code> <span>one decimal place</span></div>
+                        </div>
+
                         <h3>Pipes</h3>
                         <p>A pipe <code>|</code> feeds one command's output into the next. Real log analysis is
                             just small tools chained together:</p>

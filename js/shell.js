@@ -4,6 +4,8 @@
 // Supported: grep, cat, head, tail, wc, sort, uniq, cut, awk, ls
 // joined with pipes (|), with single/double quotes and * globs.
 
+import { compileAwk, AwkError } from "./awk.js";
+
 const TOOLS = {
   grep: { flags: ["-A", "-B", "-C", "-c", "-E", "-H", "-h", "-i", "-l", "-n", "-o", "-v", "-w"], run: grep },
   cat: { flags: ["-n"], run: cat },
@@ -386,140 +388,20 @@ function cut(args, ctx) {
   return lines.map((line) => (line.includes(delim) ? pick(line.split(delim)).join(delim) : line));
 }
 
-// awk subset:  [-F sep] '[condition] [{ print item, item ... }]'
-//   condition: /regex/  !/regex/  or  <value> <op> <value>  with ops == != < > <= >= ~ !~
-//   values:    $0..$N  $NF  NF  NR  numbers  "strings"
+// awk: see awk.js for what the interpreter supports.
 function awk(args, ctx) {
   const { opts, operands } = parseOptions("awk", args, { F: "value", stopAtOperand: true });
   if (operands.length === 0) throw new ShellError("awk: missing program (try: awk '{print $1}' file)");
   const [program, ...names] = operands;
-  const parsed = parseAwkProgram(program.trim());
-  const split = (line) =>
-    !opts.F || opts.F === " " ? line.trim().split(/\s+/).filter(Boolean) : line.split(opts.F);
-
-  const out = [];
-  let nr = 0;
-  for (const input of readInputs("awk", names, ctx)) {
-    for (const line of input.lines) {
-      nr++;
-      const record = { line, fields: split(line), nr };
-      if (parsed.condition && !parsed.condition(record)) continue;
-      out.push(parsed.print ? parsed.print(record) : line);
-    }
+  const fs = opts.F === undefined ? " " : opts.F === "t" || opts.F === "\\t" ? "\t" : opts.F;
+  try {
+    const run = compileAwk(program, (pattern) => compileRegex("awk", pattern, { extended: true }));
+    const lines = run.readsInput ? readInputs("awk", names, ctx).flatMap((input) => input.lines) : [];
+    return run(lines, { fs });
+  } catch (e) {
+    if (e instanceof AwkError) throw new ShellError(`awk: ${e.message}`);
+    throw e;
   }
-  return out;
-}
-
-function parseAwkProgram(program) {
-  const m = program.match(/^([^{]*?)\s*(?:\{\s*(.*?)\s*;?\s*\})?$/s);
-  if (!m) throw new ShellError(`awk: syntax error in program: ${program}`);
-  const [, conditionSrc, actionSrc] = m;
-  const result = {};
-
-  if (conditionSrc) result.condition = parseAwkCondition(conditionSrc.trim());
-  if (actionSrc !== undefined) {
-    const pm = actionSrc.match(/^print\b\s*(.*)$/s);
-    if (!pm) throw new ShellError(`awk: only 'print' is supported here, got: ${actionSrc || "{}"}`);
-    const items = pm[1].trim() ? splitTopLevel(pm[1], ",").map((item) => parseAwkConcat(item.trim())) : [];
-    result.print = items.length
-      ? (rec) => items.map((item) => item(rec)).join(" ")
-      : (rec) => rec.line;
-  }
-  return result;
-}
-
-function parseAwkCondition(src) {
-  if (src.includes("||")) {
-    const any = src.split("||").map((part) => parseAwkCondition(part.trim()));
-    return (rec) => any.some((cond) => cond(rec));
-  }
-  if (src.includes("&&")) {
-    const all = src.split("&&").map((part) => parseAwkCondition(part.trim()));
-    return (rec) => all.every((cond) => cond(rec));
-  }
-  const regexOnly = src.match(/^(!?)\s*\/(.*)\/$/s);
-  if (regexOnly) {
-    const re = compileRegex("awk", regexOnly[2], { extended: true });
-    return (rec) => re.test(rec.line) !== (regexOnly[1] === "!");
-  }
-  const m = src.match(/^(.+?)\s*(==|!=|<=|>=|<|>|!~|~)\s*(.+)$/s);
-  if (!m) throw new ShellError(`awk: unsupported condition: ${src}`);
-  const left = parseAwkValue(m[1].trim());
-  const op = m[2];
-  const rightSrc = m[3].trim();
-
-  if (op === "~" || op === "!~") {
-    const rm = rightSrc.match(/^\/(.*)\/$/s) || rightSrc.match(/^"(.*)"$/s);
-    if (!rm) throw new ShellError(`awk: expected /regex/ after ${op}`);
-    const re = compileRegex("awk", rm[1], { extended: true });
-    return (rec) => re.test(String(left(rec))) !== (op === "!~");
-  }
-  const right = parseAwkValue(rightSrc);
-  const isNum = (v) => v !== "" && !isNaN(Number(v));
-  return (rec) => {
-    let a = left(rec);
-    let b = right(rec);
-    if (isNum(a) && isNum(b)) {
-      a = Number(a);
-      b = Number(b);
-    } else {
-      a = String(a);
-      b = String(b);
-    }
-    switch (op) {
-      case "==": return a === b;
-      case "!=": return a !== b;
-      case "<": return a < b;
-      case ">": return a > b;
-      case "<=": return a <= b;
-      default: return a >= b;
-    }
-  };
-}
-
-// An awk print item may be several values concatenated: $1 ":" $2
-function parseAwkConcat(src) {
-  const token = /"(?:[^"\\]|\\.)*"|\$\w+|\w+/g;
-  const parts = src.match(token);
-  if (!parts || src.replace(token, "").trim() !== "") {
-    throw new ShellError(`awk: cannot print: ${src}`);
-  }
-  const values = parts.map(parseAwkValue);
-  return (rec) => values.map((v) => v(rec)).join("");
-}
-
-function parseAwkValue(src) {
-  if (src === "$0") return (rec) => rec.line;
-  if (src === "$NF") return (rec) => rec.fields[rec.fields.length - 1] ?? "";
-  if (src === "NF") return (rec) => rec.fields.length;
-  if (src === "NR") return (rec) => rec.nr;
-  const field = src.match(/^\$(\d+)$/);
-  if (field) return (rec) => rec.fields[parseInt(field[1], 10) - 1] ?? "";
-  if (/^-?\d+(\.\d+)?$/.test(src)) return () => src;
-  const str = src.match(/^"(.*)"$/s);
-  if (str) {
-    const text = str[1].replace(/\\t/g, "\t").replace(/\\(.)/g, "$1");
-    return () => text;
-  }
-  throw new ShellError(`awk: unknown value: ${src}`);
-}
-
-function splitTopLevel(src, sep) {
-  const parts = [];
-  let current = "";
-  let inString = false;
-  for (let i = 0; i < src.length; i++) {
-    const ch = src[i];
-    if (ch === '"' && src[i - 1] !== "\\") inString = !inString;
-    if (ch === sep && !inString) {
-      parts.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  parts.push(current);
-  return parts;
 }
 
 function ls(args, ctx) {

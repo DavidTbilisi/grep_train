@@ -33,6 +33,7 @@ const cases = [
   ["whole lines, -o", ["a took 300ms", "b took 4100ms"], ["300ms", "4100ms"], "grep -E '[0-9]+ms' f", "grep -oE '[0-9]+ms' f", "whole-lines", "grep-o"],
   ["too many, -w", ["a logged in", "b Loading"], ["a logged in"], "grep in f", "grep -w in f", "too-many", "grep-w"],
   ["too many, anchor", ["a connection", "b connection lost"], ["a connection"], "grep connection f", "grep 'connection$' f", "too-many", "regex-anchors"],
+  ["running total", ["5120", "6960", "7190"], ["7190"], "awk '{s += $6; print s}' f", "awk '{s += $6} END {print s}' f", "running-total", "awk-sum"],
   ["other", ["q", "r", "s"], ["a", "b"], "x", "y", "mismatch", null],
 ];
 for (const [name, got, want, command, solution, kind, skill] of cases) {

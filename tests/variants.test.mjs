@@ -31,6 +31,10 @@ test("mutations make the intended mistakes", () => {
   assert.deepEqual(apply("too-many", "grep -wc at f"), ["grep -c at f"]);
   assert.deepEqual(apply("class", "grep 'User [a-c]' f"), ["grep 'User [^a-c]' f"]);
   assert.deepEqual(apply("class", "grep '^[^ ]' f"), ["grep '^[^ ]' f"].slice(1)); // already negated
+  assert.deepEqual(apply("running-total", "awk '{s += $6} END {print s}' f"), ["awk '{s += $6; print s}' f"]);
+  assert.deepEqual(apply("assign-not-add", "awk '{s += $6} END {print s}' f"), ["awk '{s = $6} END {print s}' f"]);
+  assert.deepEqual(apply("nr-not-count", "awk '/x/ {s += $NF; n++} END {printf \"%.1f\\n\", s/n}' f"), ["awk '/x/ {s += $NF; n++} END {printf \"%.1f\\n\", s/NR}' f"]);
+  assert.deepEqual(apply("nr-not-count", "awk '{s[$4] += $6; n[$4]++} END {for (p in s) print p, s[p]/n[p]}' f"), []);
   for (const m of MUTATIONS) assert.ok(SKILL_BY_ID[m.skill], m.kind);
 });
 

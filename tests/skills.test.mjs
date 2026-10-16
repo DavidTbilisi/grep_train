@@ -44,6 +44,12 @@ const cases = [
   ["grep '^[^ ]' error.log", ["grep-basic", "regex-anchors", "regex-classes"]],
   ["grep -wc at error.log", ["grep-basic", "grep-w", "grep-count"]],
   ["grep 10.0.0.5 access.log", ["grep-basic"]],
+  ["awk '{s += $6} END {print s}' access.log", ["columns", "awk-sum"]],
+  ["awk '$5 == 200 {s += $6} END {print s}' access.log", ["columns", "awk-filter", "awk-sum"]],
+  ["awk '{s += $6} END {print s/NR}' access.log", ["columns", "awk-sum", "awk-stats"]],
+  ["awk '$6 > max {max = $6} END {print max}' access.log", ["columns", "awk-filter", "awk-stats"]],
+  ["awk '{b[$2] += $6} END {for (ip in b) print ip, b[ip]}' access.log | sort", ["pipes", "columns", "awk-sum", "awk-group"]],
+  ["awk 'END {print NR}' access.log", []],
   ["grep 'unclosed", []],
 ];
 for (const [command, expected] of cases) {

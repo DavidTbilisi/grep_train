@@ -22,9 +22,10 @@ Deploy = push to `main`: GitHub Pages (legacy build) serves the repo root of `ma
 
 | Module | Exports | Role |
 |---|---|---|
+| `js/awk.js` | `compileAwk`, `AwkError` | Pure. awk interpreter used by shell.js: BEGIN/END, variables, arrays, for-in, if/else, print/printf, a few builtins. Numbers format like gawk (%.6g, round-half-to-even on exact ties). for-in uses insertion order (real awk's is unspecified), so templates always pipe it into sort |
 | `js/shell.js` | `runCommandLine`, `TOOLS` | Pure (DOM-free) simulator: quote-aware parsing, pipes, globs, and the tools. Returns `{output}` or `{error}` |
 | `js/game-data.js` | `FILES`, `LEVELS`, `ASCII_ART` | Course log files and challenge definitions (`solution`, `hints`, `learn`, `files`, `skills`) |
-| `js/skills.js` | `SKILLS`, `SKILL_BY_ID`, `ancestors`, `detectSkills` | Pure. The 19 skills (core log tools, then the regex track), their prerequisites (array order = teaching order), and which skills a command line uses |
+| `js/skills.js` | `SKILLS`, `SKILL_BY_ID`, `ancestors`, `detectSkills` | Pure. The 22 skills (core log tools, the awk totals track, then the regex track), their prerequisites (array order = teaching order), and which skills a command line uses |
 | `js/learner.js` | `loadLearner`, `recordResult`, `outcomeScore`, `grantPlacement`, ... | Pure. Mastery per skill (EWMA, mastered at >= 0.75 after 3 results), spaced review (1/3/7/14/30 days), storage injected |
 | `js/scheduler.js` | `pickNext`, `chooseKind` | Pure. Next skill + difficulty: remediate > due review > learning > new > stretch; then the kind (predict when new, fix when remediating, a mix otherwise) |
 | `js/generator.js` | `generateChallenge`, `generatePlacement`, `TEMPLATES` | Pure. Seeded generator for app.log, access.log, and error.log (stack traces), and per-skill challenge templates (difficulty 1-3) |

@@ -371,7 +371,7 @@ class GrepGameEngine {
       number.className = "choice-number";
       number.textContent = i + 1;
       const output = document.createElement("pre");
-      output.textContent = choice.output.join("\n");
+      output.textContent = choice.output.join("\n") || "(an empty line)";
       button.append(number, output);
       box.appendChild(button);
     });

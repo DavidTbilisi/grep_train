@@ -13,7 +13,7 @@ From the menu, pick a mode:
 
 - **practice**: endless generated challenges, chosen for you (see below)
 - **course**: the 16 hand-written challenges, in order
-- **placement-test**: 7 questions without hints; each one you pass marks its skills as known so practice skips ahead
+- **placement-test**: 8 questions without hints; each one you pass marks its skills as known so practice skips ahead
 - **skills**: your skill map, with mastery, review dates, your most common mistakes, and a button to practise any skill
 
 Then:
@@ -27,7 +27,7 @@ Your progress is saved in the browser.
 
 ## 🧠 How Practice Adapts
 
-- **19 skills**, each with prerequisites: grep basics, -i, -v, -c, -n, -E, head/tail, wc, pipes, columns, sort | uniq, uniq -c, awk filters, top-N reports, and a regex track (`^`/`$` anchors, `[0-9]` classes, `-w` whole words, `+`/`{n}` repetition, `-o` extraction).
+- **22 skills**, each with prerequisites: grep basics, -i, -v, -c, -n, -E, head/tail, wc, pipes, columns, sort | uniq, uniq -c, awk filters, top-N reports, an awk totals track (sums with `END`, averages and maximums, totals per key with arrays), and a regex track (`^`/`$` anchors, `[0-9]` classes, `-w` whole words, `+`/`{n}` repetition, `-o` extraction).
 - **Mastery** per skill goes from 0 to 100%. Every result moves it towards how well you did: a clean first-try solve counts most, wrong runs and hints count less, revealing the solution or giving up after trying counts as a miss. Three clean solves in a row master a skill.
 - **Credit for what you actually used.** Solve "count the errors" with `grep | wc -l` instead of `grep -c`, and pipes and wc get the credit, not `-c`, so `-c` comes back.
 - **Wrong answers are diagnosed**: wrong order, `uniq` without `sort`, lines instead of a count, missing `-i`, inverted `-v`, wrong column, and more. Each one names the fix.
@@ -51,7 +51,7 @@ Commands can be chained with pipes (`|`), and arguments can use `'single'` and `
 | `sort` | `-n -r -u -k N[,M] -t SEP` |
 | `uniq` | `-c -d -u` |
 | `cut` | `-d SEP -f LIST`, `-c LIST` |
-| `awk` | `-F SEP`, programs like `'{print $1, $NF}'`, `'/re/'`, `'$5 == 404 {print $4}'`, `&&`, `\|\|` |
+| `awk` | `-F SEP`; a real (small) interpreter: patterns, `BEGIN`/`END`, variables, arrays, `for (k in a)`, `if`/`else`, `print`/`printf`, `length substr index tolower toupper int sprintf`. Numbers print exactly like gawk |
 | `ls`, `help`, `clear` | |
 
 ## 🌟 Challenges (16)
@@ -85,6 +85,7 @@ js/
 ├── game-engine.js      # Course / practice / placement flow, scoring
 ├── game-data.js        # Course log files, levels, challenges (solution + hints + skills)
 ├── shell.js            # Pure simulator for grep/cat/head/tail/wc/sort/uniq/cut/awk with pipes
+├── awk.js              # The awk interpreter (tokenizer, parser, gawk-compatible number formatting)
 ├── skills.js           # Skill graph + which skills a command uses
 ├── learner.js          # Mastery model, spaced review, saved progress
 ├── scheduler.js        # Picks the next skill and difficulty

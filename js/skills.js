@@ -92,6 +92,26 @@ const SKILLS = [
     learn: "sort -rn puts the biggest numbers first. Add head -n N to keep the top N.",
   },
 
+  // awk totals track
+  {
+    id: "awk-sum",
+    name: "Totals (awk sum + END)",
+    requires: ["columns"],
+    learn: "awk '{s += $6} END {print s}' adds up column 6 on every line, then prints the total once, at the END.",
+  },
+  {
+    id: "awk-stats",
+    name: "Averages and maximums (awk)",
+    requires: ["awk-sum", "awk-filter"],
+    learn: "An average is a total divided by a count: END {print s/NR}. For a maximum, keep the biggest: $6 > max {max = $6}.",
+  },
+  {
+    id: "awk-group",
+    name: "Totals per key (awk arrays)",
+    requires: ["awk-sum", "sort-uniq"],
+    learn: "Arrays total by key: {b[$2] += $6} END {for (ip in b) print ip, b[ip]}. The for-in order is random, so pipe into sort.",
+  },
+
   // Regex track
   {
     id: "regex-anchors",
@@ -213,10 +233,18 @@ function detectSkills(command) {
         break;
       case "awk": {
         const program = operands[0] || "";
-        if (/print\s[^}]*\$(\d|NF)/.test(program)) found.add("columns");
-        // Anything before the { action } (or a program with no action) is a filter.
+        const actions = (program.match(/\{[^}]*\}/g) || []).join(" ");
+        if (/\$(\d|NF|\()/.test(actions)) found.add("columns");
+        // Anything before the first { action } (or a program with no action) is a filter.
         const condition = program.includes("{") ? program.slice(0, program.indexOf("{")) : program;
-        if (condition.trim()) found.add("awk-filter");
+        if (condition.trim() && !/^\s*(BEGIN|END)\s*$/.test(condition)) found.add("awk-filter");
+        const end = program.search(/\bEND\b/);
+        if (end !== -1 && /\+=|\+\+/.test(program)) found.add("awk-sum");
+        // An average (dividing in END), or a running maximum/minimum (compare, then keep a field).
+        if ((end !== -1 && program.slice(end).includes("/")) || (/[<>]\s*[A-Za-z_]\w*/.test(program) && /[A-Za-z_]\w*\s*=\s*\$/.test(program))) {
+          found.add("awk-stats");
+        }
+        if (/[A-Za-z_]\w*\[[^\]]+\]\s*(\+=|\+\+)|\+\+\s*[A-Za-z_]\w*\[/.test(program)) found.add("awk-group");
         break;
       }
       case "sort":

@@ -39,6 +39,9 @@ function diagnose(got, want, command, solution) {
     return result("empty", `No output at all. Check the spelling and case of your pattern.${caseTip}`, caseTip ? "grep-i" : null);
   }
 
+  if (want.length === 1 && got.length > 1 && got[got.length - 1] === want[0]) {
+    return result("running-total", "That's a running total: the last line is right. Put the print in an END block so it runs once, after the last line.", "awk-sum");
+  }
   if (isCount(want) && !isCount(got)) {
     if (got.length === Number(want[0])) {
       return result("lines-not-count", `You found the right ${got.length} lines, but the task wants the number. Use grep -c or pipe into wc -l.`, "grep-count");
@@ -139,6 +142,7 @@ const MISTAKE_LABELS = {
   inverted: "Inverted match (-v) the wrong way",
   "too-many": "Filter too loose",
   "too-few": "Filter too strict",
+  "running-total": "Printed a running total (print outside END)",
   "whole-lines": "Printed whole lines instead of a column",
   "wrong-column": "Picked the wrong column",
   mismatch: "Other",
